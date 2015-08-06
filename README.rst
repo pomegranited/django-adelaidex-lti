@@ -7,6 +7,7 @@ Usage
 -----
 
 1. Add django\_adelaidex.lti to your settings.INSTALLED\_APPS::
+
     INSTALLED_APPS = (
         ...
         'django_adelaidex.lti',
