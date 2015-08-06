@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="columns small-12">
+<h1>Welcome!</h1>
+
+<p><em>This username will only be used to identify your Artworks to other students
+in the Gallery. It will not be used for any other purposes, and need not match
+your username in edX.</em></p>
+{% include 'django_adelaidex_lti/_profile.html' %}
+</div>
+{% endblock content %}

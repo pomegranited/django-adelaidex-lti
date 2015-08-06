@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load dict_filters %}
+{% block content %}
+<div class="columns columns-12">
+<h1>My Profile</h1>
+{% include 'django_adelaidex_lti/_profile.html' %}
+<a href="{{ request.GET|get:'next' }}" id="cancel_user">Cancel, go back.</a>
+</div>
+{% endblock content %}

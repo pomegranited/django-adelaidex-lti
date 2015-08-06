@@ -1,0 +1,26 @@
+{% load dict_filters %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <ul class="edit_fields">
+    {% if object.is_staff %}
+    <li>
+        <label class="inline" for="is_staff">Staff access:</label> 
+        <div class="inline" id="is_staff">enabled</div>
+    </li>
+    {% endif %}
+    {% for field in form %}
+    <li>
+        {{ field.label_tag }}
+        <label class="error">{{ field.errors }}</label>
+        <div class="helptext">{{ field.help_text }}</div>
+        {{ field }}
+    </li>
+    {% endfor %}
+    </ul>
+    <div class="row">
+        <div class="small-6 columns">
+            <button id="save_user" type="submit" class="postfix button">Save</button>
+        </div>
+    </div>
+    <input type="hidden" id="id_custom_next" name="custom_next" value="{{ request.POST|get:'custom_next' }}" />
+</form>

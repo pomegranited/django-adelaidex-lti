@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+{% if user.is_active %}
+<div class="columns small-12">
+<h1>Inactive Application</h1>
+<p>This application has been deactivated.</p>
+<p>Please contact your course instructor to get the application reinstated.</p>
+{% else %}
+<h1>Inactive Account</h1>
+<p>Your account has been deactivated.</p>
+<p>Please contact your course instructor to get your account reinstated.</p>
+{% endif %}
+</div>
+{% endblock content %}

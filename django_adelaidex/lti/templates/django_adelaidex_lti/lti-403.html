@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="columns small-12">
+<div id="lti-403-page">
+<h1>{{ ADELAIDEX_LTI_LINK_TEXT }}</h1>
+This page may only be viewed by participants of 
+<a href="{% url 'lti-login' %}{{ ADELAIDEX_LTI_QUERY_STRING }}">{{ ADELAIDEX_LTI_LINK_TEXT }}</a>.
+
+<h2>Already enrolled?</h2>
+<a href="{% url 'lti-login' %}{{ ADELAIDEX_LTI_QUERY_STRING }}">Go to {{ ADELAIDEX_LTI_LINK_TEXT }}</a>.
+
+<h2>Want to enrol?</h2>
+<a href="{% url 'lti-enrol' %}{{ ADELAIDEX_LTI_QUERY_STRING }}">Enrol in {{ ADELAIDEX_LTI_LINK_TEXT }}</a>.
+
+</div>
+</div>
+{% endblock content %}
