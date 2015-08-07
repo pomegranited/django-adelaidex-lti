@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import django.utils.timezone
 import django.core.validators
-import django_adelaidex.fields
+from django_adelaidex.util.fields import NullableCharField
 
 
 class Migration(migrations.Migration):
@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='first_name',
-            field=django_adelaidex.fields.NullableCharField(unique=True, default=None, validators=[django.core.validators.RegexValidator(b'^[\\w.@+-]+$', 'Please enter a valid nickname.', b'invalid')], max_length=255, blank=True, help_text='255 characters or fewer. Letters, digits and @/./+/-/_ only.', null=True, verbose_name='nickname'),
+            field=NullableCharField(unique=True, default=None, validators=[django.core.validators.RegexValidator(b'^[\\w.@+-]+$', 'Please enter a valid nickname.', b'invalid')], max_length=255, blank=True, help_text='255 characters or fewer. Letters, digits and @/./+/-/_ only.', null=True, verbose_name='nickname'),
         ),
         migrations.AlterField(
             model_name='user',

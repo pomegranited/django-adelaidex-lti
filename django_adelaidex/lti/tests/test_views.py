@@ -7,8 +7,7 @@ from django.core.urlresolvers import reverse
 import sys
 from urlparse import urlparse
 
-from django_adelaidex.test import UserSetUp, InactiveUserSetUp, TestOverrideSettings
-from artwork.models import Artwork
+from django_adelaidex.util.test import UserSetUp, InactiveUserSetUp, TestOverrideSettings
 
 
 class LTIEntryViewTest(UserSetUp, TestCase):
@@ -78,9 +77,9 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         self.assertLogin(client, reverse('home'))
 
         lti_login_path = reverse('lti-entry')
-        list_path = reverse('exhibition-list')
-        response = client.post(lti_login_path, {'custom_next': list_path})
-        self.assertRedirects(response, list_path, status_code=302, target_status_code=200)
+        next_path = reverse('lti-inactive')
+        response = client.post(lti_login_path, {'custom_next': next_path})
+        self.assertRedirects(response, next_path, status_code=302, target_status_code=200)
 
     def test_set_nickname(self):
 
@@ -287,7 +286,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
         self.assertIsNone(cookie)
 
         # get login view, with next param set
-        target = reverse('artwork-studio')
+        target = reverse('lti-user-profile')
         querystr = '?next=' + target
         lti_login = reverse('lti-login') + querystr
         response = client.get(lti_login)
@@ -319,7 +318,7 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
         self.assertIsNone(cookie)
 
         # get enrol view, with next param set
-        target = reverse('artwork-studio')
+        target = reverse('lti-user-profile')
         querystr = '?next=' + target
         lti_enrol = reverse('lti-enrol') + querystr
         response = client.get(lti_enrol)
@@ -350,7 +349,7 @@ class LTIPermissionDeniedViewTest(TestOverrideSettings, TestCase):
         client.logout()
 
         # ensure login-required URL redirects to lti-403
-        target = reverse('artwork-studio')
+        target = reverse('lti-user-profile')
         querystr = '?next=' + target
         lti_403 = reverse('lti-403') + querystr
         response = client.get(target)
@@ -372,7 +371,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         'PERSIST_PARAMS': ['next'],
     })
     @override_settings(LOGIN_URL='lti-403')
-    def _performRedirectTest(self, target, target_status_code=200):
+    def test_login_redirect(self):
 
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -387,6 +386,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         self.assertIsNone(cookie)
 
         # visit the lti login redirect url, with the target in the querystring
+        target = reverse('lti-user-profile')
         querystr = '?next=' + target
         lti_login = reverse('lti-login') + querystr
         response = client.get(lti_login)
@@ -403,11 +403,11 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         lti_entry = reverse('lti-entry')
         lti_post_param = {'first_name': 'Username'}
         response = client.post(lti_entry, lti_post_param)
-        self.assertRedirects(response, target, status_code=302, target_status_code=target_status_code)
+        self.assertRedirects(response, target, status_code=302, target_status_code=200)
         
         # ensure the cookie has cleared by revisiting lti-entry, and ensuring
         # we're redirected properly
-        for custom_next in (reverse('artwork-add'), None):
+        for custom_next in (reverse('lti-inactive'), None):
             if custom_next:
                 lti_post_param['custom_next'] = custom_next
             else:
@@ -416,23 +416,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
             response = client.post(lti_entry, lti_post_param)
             self.assertRedirects(response, custom_next or reverse('home'), status_code=302, target_status_code=200)
 
-        return True
-
-    def test_my_studio(self):
-        path = reverse('artwork-studio') # redirects to artwork-author-list
-        ok = self._performRedirectTest(path, 302)
-        self.assertTrue(ok)
-
-    def test_artwork_add(self):
-        path = reverse('artwork-add')
-        ok = self._performRedirectTest(path)
-        self.assertTrue(ok)
-
-    def test_private_artwork(self):
-        private_artwork = Artwork.objects.create(title='Private Artwork', code='// code goes here', author=self.user)
-        path = reverse('artwork-view', kwargs={'pk': private_artwork.id})
-        ok = self._performRedirectTest(path)
-        self.assertTrue(ok)
+        self.assertTrue(True)
 
 
 class UserProfileViewTest(UserSetUp, TestCase):
@@ -523,7 +507,7 @@ class UserProfileViewTest(UserSetUp, TestCase):
     def test_post_with_next(self):
         '''Default next path is home'''
         client = Client()
-        next_path = reverse('help')
+        next_path = reverse('lti-inactive')
         profile_path = '%s?next=%s' % (reverse('lti-user-profile'), next_path)
         form_data = {'first_name':'MyNickName'}
 

@@ -4,10 +4,34 @@ from django.conf import settings
 from django.test.utils import override_settings
 from django.contrib.auth import get_user_model
 
-from django_adelaidex.test import SeleniumTestCase, InactiveUserSetUp, TestOverrideSettings, wait_for_page_load
+from django_adelaidex.util.test import SeleniumTestCase, InactiveUserSetUp, TestOverrideSettings, wait_for_page_load
 
 
 class LTILoginViewTest(TestOverrideSettings, SeleniumTestCase):
+
+    def test_not_set(self):
+        # ensure no cookies set
+        cookies = self.selenium.get_cookies()
+        self.assertEqual(len(cookies), 0)
+
+        # get login view, with next param set
+        target = reverse('lti-user-profile')
+        target_url = '%s%s' % (self.live_server_url, target)
+        querystr = '?next=' + target
+        lti_login = reverse('lti-login')
+        lti_login_url = '%s%s%s' % (self.live_server_url, lti_login, querystr)
+
+        self.selenium.get(lti_login_url)
+
+        # ensure it hasn't redirected
+        self.assertEqual(self.selenium.current_url, lti_login_url)
+
+        # ensure only csrf cookie set
+        self.selenium.get(target_url)
+        cookies = self.selenium.get_cookies()
+        self.assertEqual(len(cookies), 1)
+        self.assertEqual(cookies[0]['name'], 'csrftoken')
+
 
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
@@ -21,7 +45,8 @@ class LTILoginViewTest(TestOverrideSettings, SeleniumTestCase):
 
         # ensure no cookies set
         cookies = self.selenium.get_cookies()
-        self.assertEqual(len(cookies), 0)
+        self.assertEqual(len(cookies), 1)
+        self.assertEqual(cookies[0]['name'], 'csrftoken')
 
         # get login view, with next param set
         target = reverse('lti-user-profile')
@@ -39,17 +64,58 @@ class LTILoginViewTest(TestOverrideSettings, SeleniumTestCase):
         # ensure cookie was set
         self.selenium.get(target_url)
         cookies = self.selenium.get_cookies()
+        self.assertEqual(len(cookies), 2)
+        self.assertEqual(cookies[0]['name'], 'csrftoken')
+        self.assertEqual(cookies[1]['name'], settings.ADELAIDEX_LTI['PERSIST_NAME'])
+
+
+class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
+
+    def test_not_set(self):
+
+        # ensure no cookies set (other than csrf, possibly)
+        cookies = self.selenium.get_cookies()
+        if len(cookies):
+            self.assertEqual(len(cookies), 1)
+            self.assertEqual(cookies[0]['name'], 'csrftoken')
+        else:
+            self.assertEqual(len(cookies), 0)
+
+        # get enrol view, with next param set
+        target = reverse('lti-user-profile')
+        target_url = '%s%s' % (self.live_server_url, target)
+        querystr = '?next=' + target
+        lti_enrol = reverse('lti-enrol')
+        lti_enrol_url = '%s%s%s' % (self.live_server_url, lti_enrol, querystr)
+
+        self.selenium.get(lti_enrol_url)
+
+        # ensure it redirects nowhere
+        self.assertRegexpMatches(self.selenium.current_url, '')
+
+        # ensure no lti cookies set
+        self.selenium.get(target_url)
+        cookies = self.selenium.get_cookies()
         self.assertEqual(len(cookies), 1)
-        self.assertEqual(cookies[0]['name'], settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        self.assertEqual(cookies[0]['name'], 'csrftoken')
 
 
-class LTIEnrolViewTest(SeleniumTestCase):
-
+    @override_settings(ADELAIDEX_LTI={
+        'ENROL_URL':'https://www.google.com.au', 
+        'PERSIST_NAME': 'adelaidex', 
+        'PERSIST_PARAMS': ['next'],
+    })
     def test_view(self):
+
+        self.reload_urlconf()
 
         # ensure no cookies set
         cookies = self.selenium.get_cookies()
-        self.assertEqual(len(cookies), 0)
+        if len(cookies):
+            self.assertEqual(len(cookies), 1)
+            self.assertEqual(cookies[0]['name'], 'csrftoken')
+        else:
+            self.assertEqual(len(cookies), 0)
 
         # get enrol view, with next param set
         target = reverse('lti-user-profile')
@@ -136,6 +202,10 @@ class LTIEntryViewTest(SeleniumTestCase):
 
 class LTIInactiveEntryViewTest(InactiveUserSetUp, SeleniumTestCase):
 
+    @override_settings(ADELAIDEX_LTI={
+        'PERSIST_NAME': 'adelaidex',
+        'PERSIST_PARAMS': ['next'],
+    })
     def test_default_view(self):
 
         lti_entry_path = reverse('lti-entry')
@@ -155,7 +225,10 @@ class LTIInactiveEntryViewTest(InactiveUserSetUp, SeleniumTestCase):
 class LTIPermissionDeniedViewTest(TestOverrideSettings, SeleniumTestCase):
 
     # Set the LTI Login Url, and use lti-403 as the login URL
-    @override_settings(ADELAIDEX_LTI={'LOGIN_URL':'https://www.google.com.au', 'LINK_TEXT': 'Course name'})
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL':'https://www.google.com.au',
+        'LINK_TEXT': 'Course name',
+    })
     def test_view(self):
 
         self.reload_urlconf()
@@ -208,8 +281,8 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(len(cookies), 0)
 
         # visit the lti login redirect url, with the target in the querystring
-        querystr = '?next=' + target
         target = reverse('lti-user-profile')
+        querystr = '?next=' + target
         target_url = '%s%s' % (self.live_server_url, target)
 
         lti_login = reverse('lti-login') + querystr
@@ -280,7 +353,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertTrue(True)
 
 
-class UserProfileViewTest(SeleniumTestCase):
+class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):
 
     def test_anon_view(self):
         '''Profile View requires login'''
@@ -420,7 +493,7 @@ class UserProfileViewTest(SeleniumTestCase):
         self.assertEqual(user.time_zone, form_data['time_zone'])
 
     def test_post_with_next(self):
-        next_path = reverse('help')
+        next_path = reverse('lti-inactive')
         next_url = '%s%s' % (self.live_server_url, next_path)
 
         profile_path = '%s?next=%s' % (reverse('lti-user-profile'), next_path)
@@ -443,8 +516,12 @@ class UserProfileViewTest(SeleniumTestCase):
         self.assertEqual(user.first_name, form_data['first_name'])
         self.assertEqual(user.time_zone, 'UTC')
 
+    @override_settings(ADELAIDEX_LTI={
+        'PERSIST_NAME': 'adelaidex', 
+        'PERSIST_PARAMS': ['next'],
+    })
     def test_cancel_post_custom_next(self):
-        next_path = reverse('help')
+        next_path = reverse('lti-inactive')
         next_url = '%s%s' % (self.live_server_url, next_path)
 
         profile_path = '%s?next=%s' % (reverse('lti-user-profile'), next_path)
@@ -467,6 +544,3 @@ class UserProfileViewTest(SeleniumTestCase):
         user = get_user_model().objects.get(username=self.get_username('student'))
         self.assertEqual(user.first_name, '')
         self.assertEqual(user.time_zone, None)
-
-
-

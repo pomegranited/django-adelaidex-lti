@@ -6,7 +6,7 @@ from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.utils.http import is_safe_url
 from django.shortcuts import get_object_or_404
-from django_adelaidex.mixins import TemplatePathMixin, CSRFExemptMixin, LoggedInMixin
+from django_adelaidex.util.mixins import TemplatePathMixin, CSRFExemptMixin, LoggedInMixin
 from django_adelaidex.lti.models import UserForm
 import re
 import pickle
@@ -88,7 +88,7 @@ class LTIRedirectView(LTIPersistMixin, RedirectView):
         cookie_name = self.lti_settings('PERSIST_NAME')
         if cookie_name:
             store_params = {}
-            persist_params = self.lti_settings('PERSIST_PARAMS', [])
+            persist_params = self.lti_settings('PERSIST_PARAMS', [REDIRECT_FIELD_NAME])
             for key in persist_params:
                 store_params[key] = self.request.GET.get(key)
 

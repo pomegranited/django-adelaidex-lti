@@ -31,13 +31,13 @@ setup(
     install_requires=[
         'Django>=1.7',
         'pytz>=2015.2',
-        'django-adelaidex>=0.1',
-        'django-auth-lti>=1.2.1',
+        'django-adelaidex-util>=0.1',
+        'django-auth-lti==1.2.1',
     ],
     tests_require=[
-        'selenium>=2.44.0',
-        'PyVirtualDisplay>=0.1.5',
-        'mock',
+        'selenium==2.44.0',
+        'PyVirtualDisplay==0.1.5',
+        'mock==1.0.1',
     ],
     zip_safe=False,
 )

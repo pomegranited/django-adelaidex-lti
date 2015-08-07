@@ -11,8 +11,8 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.models import UserManager
 
-from django_adelaidex.fields import NullableCharField
-from django_adelaidex.widgets import SelectTimeZoneWidget
+from django_adelaidex.util.fields import NullableCharField
+from django_adelaidex.util.widgets import SelectTimeZoneWidget
 
 
 class UserManager(UserManager):

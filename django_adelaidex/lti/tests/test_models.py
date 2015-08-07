@@ -1,8 +1,10 @@
 from django.test import TestCase
 from django.core import mail
 from django.core.management import call_command
+from django.test.utils import override_settings
+from django.conf import settings
 
-from django_adelaidex.lti.models import User, UserManager, UserForm, staff_member_group
+from django_adelaidex.lti.models import User, UserManager, UserForm
 
 class UserManagerTests(TestCase):
 
@@ -104,10 +106,35 @@ class UserGroupTests(TestCase):
         call_command("loaddata", '000_staff_group.json', verbosity=0)
         super(UserGroupTests, cls).setUpClass()
 
+    def test_no_staff_group(self):
+        '''Ensure user creation works without setting ADELAIDEX_LTI.STAFF_MEMBER_GROUP'''
+        user = User.objects.create_user('user_name')
+        self.assertEquals(0, user.groups.count())
+
+        # refetch to ensure data not cached
+        user = User.objects.get(username='user_name')
+        self.assertEquals(0, user.groups.count())
+
+        user.is_staff = True
+        user.save()
+        user = User.objects.get(username='user_name')
+        self.assertEquals(0, user.groups.count())
+
+        user.is_staff = False
+        user.save()
+        user = User.objects.get(username='user_name')
+        self.assertEquals(0, user.groups.count())
+
+        # changing without saving does nothing
+        user.is_staff = True
+        user = User.objects.get(username='user_name')
+        self.assertEquals(0, user.groups.count())
+
+    @override_settings(ADELAIDEX_LTI={'STAFF_MEMBER_GROUP': 1})
     def test_staff_group(self):
         '''Ensure user.is_staff determines membership in Staff Members group'''
         user = User.objects.create_user('user_name')
-        group_id = staff_member_group()
+        group_id = settings.ADELAIDEX_LTI['STAFF_MEMBER_GROUP']
 
         self.assertEquals(0, user.groups.count())
 
