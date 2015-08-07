@@ -12,14 +12,14 @@ Usage
         'LOGIN_URL': None,
         'COURSE_URL': 'https://courses.edx.org/courses...',
         'ENROL_URL': 'https://edx.org/course/...',
-        'OAUTH_CREDENTIALS': {
-            'mykey': 'mysecret'
-        },
         'LINK_TEXT': 'Course Name Goes Here',
         'PERSIST_NAME': 'lti-myapp',
         'PERSIST_PARAMS': ['next'],
         'STAFF_MEMBER_GROUP': 1,
     }
+    LTI_OAUTH_CREDENTIALS': {
+        'mykey': 'mysecret'
+    },
 
 2. Add django\_adelaidex.lti to your settings.INSTALLED\_APPS::
 
