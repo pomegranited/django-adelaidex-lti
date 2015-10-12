@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse_lazy
 
 from django_adelaidex.lti.views import LTIPermissionDeniedView
+from django_adelaidex.lti.tests.views import TestOauthPostView
 
 
 urlpatterns = patterns('',
@@ -18,6 +19,10 @@ urlpatterns = patterns('',
     url(r'^login/$', auth_views.login,
         {'template_name': 'login.html'},
         name='login'),
+
+    # Mock OAUTH post params
+    url('^oauth/$', TestOauthPostView.as_view(),
+        name='test_oauth'),
 
     url(r'^auth/login/$', auth_views.login,
         {'template_name': 'login.html'},

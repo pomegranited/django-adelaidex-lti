@@ -352,6 +352,93 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
 
         self.assertTrue(True)
 
+    @override_settings(ADELAIDEX_LTI={
+            'LOGIN_URL': reverse('test_oauth'),
+            'PERSIST_NAME': 'adelaidex', 
+            'PERSIST_PARAMS': ['next'],
+        },
+        LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' },
+    )
+    def test_oauth(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # ensure we've got no LTI cookie set
+        self.selenium.delete_all_cookies()
+        cookies = self.selenium.get_cookies()
+        self.assertEqual(len(cookies), 0)
+
+        # visit the lti login redirect url, with the target in the querystring
+        target = reverse('lti-user-profile')
+        querystr = '?next=' + target
+        target_url = '%s%s' % (self.live_server_url, target)
+
+        # lti-login redirects to LOGIN_URL (test_oauth)
+        lti_login = reverse('lti-login') + querystr
+        lti_login_url = '%s%s' % (self.live_server_url, lti_login)
+        self.selenium.get(lti_login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('Username')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to target
+        self.assertEqual(self.selenium.current_url, target_url)
+
+        # ensure cookie was cleared
+        cookies = self.selenium.get_cookies()
+        self.assertEqual(len(cookies), 2, cookies)
+        self.assertEqual(cookies[0]['name'], 'sessionid')
+        self.assertEqual(cookies[1]['name'], 'csrftoken')
+
+        # double-check the cookie has cleared by revisiting lti-entry, and
+        # ensuring we're redirected properly
+        for custom_next in (reverse('lti-user-profile'), None):
+            self.selenium.get(lti_entry_url)
+
+            # fill in form
+            first_name = self.selenium.find_element_by_id('id_first_name')
+            self.assertIsNotNone(first_name)
+            first_name.send_keys('Username')
+
+            if custom_next:
+                custom_next_url = '%s%s' % (self.live_server_url, custom_next)
+                custom_next_field = self.selenium.find_element_by_id('id_custom_next')
+                self.selenium.execute_script('''
+                    var elem = arguments[0];
+                    var value = arguments[1];
+                    elem.value = value;
+                ''', custom_next_field, custom_next)
+            else:
+                custom_next_url = '%s%s' % (self.live_server_url, reverse('home'))
+
+            save = self.selenium.find_element_by_id('save_user')
+            with wait_for_page_load(self.selenium):
+                save.click()
+
+            # Ensure we're redirected to the redirect url
+            self.assertEqual(self.selenium.current_url, custom_next_url)
+
+        self.assertTrue(True)
+
 
 class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):
 

@@ -46,6 +46,11 @@ MIDDLEWARE_CLASSES = (
     'django_adelaidex.lti.middleware.TimezoneMiddleware',
 )
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend', # Django's default auth backend
+    'django_auth_lti.backends.LTIAuthBackend',
+]
+
 TIME_ZONE = 'UTC'
 
 AUTH_USER_MODEL = 'lti.User'

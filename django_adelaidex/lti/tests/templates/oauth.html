@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="POST" action="{{ action }}" enctype="multipart/form-data">
+    {% for name, value in oauth_params.items %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}" />
+    {% endfor %}
+    <input type="submit" id="post_oauth" />
+</form>
+{% endblock %}
