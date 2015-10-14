@@ -8,6 +8,10 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 
 
+class TestDisqusSSOView(TemplateView):
+    template_name='disqus_sso.html'
+
+
 class TestOauthPostView(TemplateView):
 
     template_name = 'oauth.html'

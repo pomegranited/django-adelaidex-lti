@@ -62,6 +62,8 @@ TEMPLATE_DIRS = (
 TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.request',
     'django_adelaidex.lti.context_processors.lti_settings',
+    'django_adelaidex.lti.context_processors.disqus_settings',
+    'django_adelaidex.lti.context_processors.disqus_sso',
 )
 
 FIXTURE_DIRS = (
