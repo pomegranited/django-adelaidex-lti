@@ -3,6 +3,7 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.test.utils import override_settings
 from django.contrib.auth import get_user_model
+from django_auth_lti.backends import LTIAuthBackend
 
 from django_adelaidex.util.test import SeleniumTestCase, InactiveUserSetUp, TestOverrideSettings, wait_for_page_load
 
@@ -438,6 +439,212 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
             self.assertEqual(self.selenium.current_url, custom_next_url)
 
         self.assertTrue(True)
+
+    @override_settings(ADELAIDEX_LTI={
+            'LOGIN_URL': reverse('test_oauth'),
+            'PERSIST_NAME': 'adelaidex', 
+            'PERSIST_PARAMS': ['next'],
+        },
+        LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' },
+    )
+    def test_oauth_user(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account.
+        # lti-login redirects to LOGIN_URL (test_oauth)
+        lti_login = reverse('lti-login')
+        lti_login_url = '%s%s' % (self.live_server_url, lti_login)
+        self.selenium.get(lti_login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a user
+        self.assertEqual(num_users+1, get_user_model().objects.count())
+
+        # 2. Re-authenticate as the same user
+        current_user = get_user_model().objects.get(first_name='IMAUSER')
+        user_id = current_user.username
+        # remove the user prefix
+        prefix = LTIAuthBackend.unknown_user_prefix
+        user_id = user_id[user_id.startswith(prefix) and len(prefix):] 
+        self.performLogout()
+
+        login_user_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_user', kwargs={'uid': user_id}))
+        self.selenium.get(login_user_url)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # ensure we're redirected back to home
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we haven't added any more users.
+        self.assertEqual(num_users+1, get_user_model().objects.count())
+
+    @override_settings(ADELAIDEX_LTI={
+            'LOGIN_URL': reverse('test_oauth'),
+            'PERSIST_NAME': 'adelaidex', 
+            'PERSIST_PARAMS': ['next'],
+        },
+        LTI_OAUTH_CREDENTIALS = { 
+            'mykey': 'mysecret', 
+            'mykey2': 'mysecret2',
+        },
+    )
+    def test_oauth_key(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, using the specified key
+        oauth_key = 'mykey2'
+        login_key_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_key', kwargs={'key': oauth_key}))
+        self.selenium.get(login_key_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the correct key was used
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), oauth_key)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a user
+        self.assertEqual(num_users+1, get_user_model().objects.count())
+
+    @override_settings(ADELAIDEX_LTI={
+            'LOGIN_URL': reverse('test_oauth'),
+            'PERSIST_NAME': 'adelaidex', 
+            'PERSIST_PARAMS': ['next'],
+        },
+        LTI_OAUTH_CREDENTIALS = { 
+            'mykey': 'mysecret', 
+            'mykey2': 'mysecret2',
+        },
+    )
+    def test_oauth_user(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, using the specified key
+        oauth_key = 'mykey2'
+        login_key_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_key', kwargs={'key': oauth_key}))
+        self.selenium.get(login_key_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the correct key was used
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), oauth_key)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a user
+        self.assertEqual(num_users+1, get_user_model().objects.count())
+
+        # 2. Re-authenticate as the same user
+        current_user = get_user_model().objects.get(first_name='IMAUSER')
+        user_id = current_user.username
+        # remove the user prefix
+        prefix = LTIAuthBackend.unknown_user_prefix
+        user_id = user_id[user_id.startswith(prefix) and len(prefix):] 
+        self.performLogout()
+
+        login_user_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_user_key', 
+                    kwargs={'uid': user_id, 'key': oauth_key}))
+        self.selenium.get(login_user_url)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # ensure we're redirected back to home
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we haven't added any more users.
+        self.assertEqual(num_users+1, get_user_model().objects.count())
 
 
 class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):

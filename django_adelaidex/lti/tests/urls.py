@@ -21,8 +21,14 @@ urlpatterns = patterns('',
         name='login'),
 
     # Mock OAUTH post params
-    url('^oauth/$', TestOauthPostView.as_view(),
+    url(r'^oauth/$', TestOauthPostView.as_view(),
         name='test_oauth'),
+    url(r'^oauth/u/(?P<uid>[^/]+)/$', TestOauthPostView.as_view(),
+        name='test_oauth_user'),
+    url(r'^oauth/k/(?P<key>[^/]+)/$', TestOauthPostView.as_view(),
+        name='test_oauth_key'),
+    url(r'^oauth/u/(?P<uid>[^/]+)/(?P<key>[^/]+)$', TestOauthPostView.as_view(),
+        name='test_oauth_user_key'),
 
     url(r'^auth/login/$', auth_views.login,
         {'template_name': 'login.html'},

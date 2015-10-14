@@ -18,12 +18,13 @@ class TestOauthPostView(TemplateView):
 
     # Generate the parameters required for an OAUTH 1.0 request
     # http://tools.ietf.org/html/rfc5849
-    def oauth_params(self, action, method='POST', user_id=None):
-        keys = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {}).keys()
-        if not keys:
-            return None
+    def oauth_params(self, action, method='POST', uid=None, key=None):
+        if not key:
+            keys = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {}).keys()
+            if not keys:
+                return None
+            key = keys[0]
 
-        key = keys[0]
         secret = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {}).get(key)
         if not secret:
             return None
@@ -34,10 +35,8 @@ class TestOauthPostView(TemplateView):
             nonce = nonce + str(randint(0,9))
         nonce = int(nonce)
 
-        # Warning:  This test view creates a new user for each auth.
-        # Not sure how to test with existing user_ids, or if we need to.
-        if not user_id:
-            user_id = str(nonce)
+        if not uid:
+            uid = str(nonce)
 
         signer = SignatureMethod()
         oauth_params = {
@@ -45,7 +44,7 @@ class TestOauthPostView(TemplateView):
             'oauth_signature_method': signer.name,
             'oauth_timestamp': str(int(time.time())),
             'oauth_nonce': str(nonce),
-            'user_id': user_id,
+            'user_id': uid,
             'oauth_version': '1.0',
             'lti_message_type': 'basic-lti-launch-request',
         }
@@ -56,5 +55,5 @@ class TestOauthPostView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super(TestOauthPostView, self).get_context_data(**kwargs)
         context['action'] = self.request.build_absolute_uri(reverse('lti-entry'))
-        context['oauth_params'] = self.oauth_params(action=context['action'])
+        context['oauth_params'] = self.oauth_params(action=context['action'], **self.kwargs)
         return context
