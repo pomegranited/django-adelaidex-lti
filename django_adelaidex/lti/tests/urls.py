@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse_lazy
 
 from django_adelaidex.lti.views import LTIPermissionDeniedView
+from django_adelaidex.lti.tests.views import TestDisqusSSOView
 
 
 urlpatterns = patterns('',
@@ -25,4 +26,8 @@ urlpatterns = patterns('',
     url(r'^logout/$', auth_views.logout,
         {'next_page': reverse_lazy('home')},
         name='logout'),
+
+    # Used by unit tests
+    url(r'^test/disqus_sso', TestDisqusSSOView.as_view(),
+        name='test-disqus-sso'),
 )
