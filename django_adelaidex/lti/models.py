@@ -15,6 +15,45 @@ from django_adelaidex.util.fields import NullableCharField
 from django_adelaidex.util.widgets import SelectTimeZoneWidget
 
 
+class Cohort(models.Model):
+    class Meta:
+        db_table = 'auth_cohort'
+
+    title = models.CharField(_('title'), max_length=500,
+        help_text=_('Required. Will be displayed to students as the "course name" on the login screen.'),
+    )
+    login_url = models.URLField(_('login url'), max_length=500,
+        help_text=_('Required. Choose a URL in your course that displays the LTI component.'),
+    )
+    enrol_url = models.URLField(_('enrol url'), max_length=500, blank=True, null=True, default=None,
+        help_text=_('Optional. Provide a URL for students to enrol in your course.'),
+    )
+    oauth_key = models.CharField(_('oauth key'), max_length=255, unique=True,
+        help_text=_('Required. 255 characters or fewer, but must be unique. Letters, digits and '
+                    '.+:_- only.'),
+        validators=[
+            validators.RegexValidator(r'^[\w.@+:-]+$', _('Enter a valid oauth key.'), 'invalid'),
+        ])
+    oauth_secret = models.CharField(_('oauth secret'), max_length=255, unique=True,
+        help_text=_('Required. 255 characters or fewer. Letters, digits, spaces and '
+                    '.+:_- only.'),
+        validators=[
+            validators.RegexValidator(r'^[\w\s.@+:-]+$', _('Enter a valid oauth secret.'), 'invalid'),
+        ])
+    persist_params = models.TextField(_('persistent parameters'), blank=True, null=True, default=None,
+        help_text=_('List of parameters sent by the LTI producer to this application, '
+                    'which should be preserved during authentication. Put each parameter name on a new line.'),
+        )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __unicode__(self):
+        return '%s (%s)' % (self.title, self.oauth_key)
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+
 class UserManager(UserManager):
 
     def create_superuser(self, username, email=None, password=None, **extra_fields):

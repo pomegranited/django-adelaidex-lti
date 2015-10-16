@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django_adelaidex.lti.models import User
+from django_adelaidex.lti.models import User, Cohort
 
 class UserAdmin(admin.ModelAdmin):
     readonly_fields = ('password',)
@@ -7,3 +7,9 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ('is_staff', 'is_active',)
 
 admin.site.register(User, UserAdmin)
+
+
+class CohortAdmin(admin.ModelAdmin):
+    list_display = ('title', 'oauth_key',)
+
+admin.site.register(Cohort, CohortAdmin)

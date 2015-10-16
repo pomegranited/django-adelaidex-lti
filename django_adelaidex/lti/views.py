@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.utils.http import is_safe_url
 from django.shortcuts import get_object_or_404
 from django_adelaidex.util.mixins import TemplatePathMixin, CSRFExemptMixin, LoggedInMixin
-from django_adelaidex.lti.models import UserForm
+from django_adelaidex.lti.models import UserForm, Cohort
 import re
 import pickle
 

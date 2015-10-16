@@ -6,8 +6,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 SECRET_KEY = 'notagoodsecret'
 
 # Runs via ./manage.py test
-DEBUG = False
-TEMPLATE_DEBUG = False
+DEBUG = True
+TEMPLATE_DEBUG = True
 ALLOWED_HOSTS = ['*']
 STATIC_URL = '/static/'
 LOGIN_URL = 'login'
@@ -29,6 +29,7 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'django.contrib.auth',
+    'django.contrib.admin',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
 
@@ -40,6 +41,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django_adelaidex.lti.middleware.CohortLTIOAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_auth_lti.middleware.LTIAuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -61,6 +63,7 @@ TEMPLATE_DIRS = (
 )
 TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.request',
+    'django.contrib.auth.context_processors.auth',
     'django_adelaidex.lti.context_processors.lti_settings',
     'django_adelaidex.lti.context_processors.disqus_settings',
     'django_adelaidex.lti.context_processors.disqus_sso',
@@ -71,3 +74,7 @@ FIXTURE_DIRS = (
 )
 
 ROOT_URLCONF = 'django_adelaidex.lti.tests.urls'
+
+ADELAIDEX_LTI = {
+    'STAFF_MEMBER_GROUP': 1,
+}

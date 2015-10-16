@@ -4,7 +4,31 @@ from django.core.management import call_command
 from django.test.utils import override_settings
 from django.conf import settings
 
-from django_adelaidex.lti.models import User, UserManager, UserForm
+from django_adelaidex.lti.models import Cohort, User, UserManager, UserForm
+
+
+class CohortTests(TestCase):
+
+    def test_str(self):
+       
+        '''Cohort shows the title and oauth_key'''
+        cohort = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+        )
+        self.assertEquals(
+            str(cohort),
+            'Test Cohort (mykey)'
+        )
+
+        cohort.oauth_key = 'mykey2'
+        self.assertEquals(
+            str(cohort),
+            'Test Cohort (mykey2)'
+        )
+
 
 class UserManagerTests(TestCase):
 
@@ -118,7 +142,7 @@ class UserGroupTests(TestCase):
         user.is_staff = True
         user.save()
         user = User.objects.get(username='user_name')
-        self.assertEquals(0, user.groups.count())
+        self.assertEquals(1, user.groups.count())
 
         user.is_staff = False
         user.save()

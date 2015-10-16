@@ -2,7 +2,23 @@
 {
     "fields": {
         "name": "Staff Members",
-        "permissions": []
+        "permissions": [
+            [
+                "add_cohort",
+                "lti",
+                "cohort"
+            ],
+            [
+                "change_cohort",
+                "lti",
+                "cohort"
+            ],
+            [
+                "delete_cohort",
+                "lti",
+                "cohort"
+            ]
+        ]
     },
     "model": "auth.group",
     "pk": 1

@@ -6,10 +6,13 @@ from django.core.urlresolvers import reverse_lazy
 from django_adelaidex.lti.views import LTIPermissionDeniedView
 from django_adelaidex.lti.tests.views import TestDisqusSSOView, TestOauthPostView
 
+from django.contrib import admin
+admin.autodiscover()
 
 urlpatterns = patterns('',
     url(r'^/?$', LTIPermissionDeniedView.as_view(), name='home'),
     url(r'^lti/', include('django_adelaidex.lti.urls')),
+    url(r'^admin/', include(admin.site.urls)),
 
     # Decide whether to use auth login or django_adelaidex.lti as the 'login' url
     url(r'^login/$',

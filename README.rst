@@ -81,6 +81,28 @@ To set up the virtualenv::
     pip install --extra-index-url=http://lti-adx.adelaide.edu.au/pypi/ -U -r django_adelaidex/lti/tests/pip.txt 
     sudo find .virtualenv/lib/python2.7/site-packages -name \*.so -exec chcon -t shlib_t {} \;
 
+Use the data fixtures to load the initial staff users list:
+
+    ./manage.py loaddata django_adelaidex/lti/tests/fixtures/000_staff_group.json
+        Installed 1 object(s) from 1 fixture(s)
+
+To run the standalone server::
+
+    ./manage.py runserver 0.0.0.0:8000
+
+To create users on the standalone server::
+            
+    (.virtualenv)$ ./manage.py shell
+        >>> from django_adelaidex.lti.models import User
+        >>> student = User.objects.create_user('student', 'student@adelaide.edu.au', 'password')
+        >>> superuser = User.objects.create_user('superuser', 'super@adelaide.edu.au', 'password')
+        >>> superuser.is_super = True
+        >>> superuser.is_staff = True
+        >>> superuser.save()
+        >>> staff = User.objects.create_user('staff', 'staff@adelaide.edu.au', 'password')
+        >>> staff.is_staff = True
+        >>> staff.save()
+
 To run the tests::
 
     python manage.py test
