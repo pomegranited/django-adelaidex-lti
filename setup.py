@@ -32,10 +32,10 @@ setup(
         'Django>=1.7',
         'pytz>=2015.2',
         'django-adelaidex-util>=0.1',
-        'django-auth-lti==1.2.4.1',
+        'django-auth-lti==1.2.4',
     ],
     tests_require=[
-        'selenium==2.44.0',
+        'selenium==2.48.0',
         'PyVirtualDisplay==0.1.5',
         'mock==1.0.1',
     ],

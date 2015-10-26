@@ -9,12 +9,14 @@
     </li>
     {% endif %}
     {% for field in form %}
+    {% if not field.name == 'cohort' %}
     <li>
         {{ field.label_tag }}
         <label class="error">{{ field.errors }}</label>
         <div class="helptext">{{ field.help_text }}</div>
         {{ field }}
     </li>
+    {% endif %}
     {% endfor %}
     </ul>
     <div class="row">

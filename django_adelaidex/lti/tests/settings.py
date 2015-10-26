@@ -41,7 +41,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django_adelaidex.lti.middleware.CohortLTIOAuthMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_auth_lti.middleware.LTIAuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -50,7 +49,7 @@ MIDDLEWARE_CLASSES = (
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend', # Django's default auth backend
-    'django_auth_lti.backends.LTIAuthBackend',
+    'django_adelaidex.lti.backends.CohortLTIAuthBackend',
 ]
 
 TIME_ZONE = 'UTC'

@@ -3,6 +3,7 @@ from django.core import mail
 from django.core.management import call_command
 from django.test.utils import override_settings
 from django.conf import settings
+from django.db import IntegrityError
 
 from django_adelaidex.lti.models import Cohort, User, UserManager, UserForm
 
@@ -121,6 +122,17 @@ class UserTests(TestCase):
         self.assertEqual(message.from_email, "from@domain.com")
         self.assertEqual(message.to, [user.email])
 
+    def test_name_unique_cohort(self):
+        cohort = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+        )
+        user = User.objects.create_user('user1', first_name='First', cohort=cohort)
+        self.assertRaises(IntegrityError, User.objects.create_user,
+            'user2', first_name='First', cohort=cohort)
+
 
 class UserGroupTests(TestCase):
 
@@ -209,14 +221,33 @@ class UserModelFormTests(TestCase):
 
     def test_name_unique(self):
 
+        # Test first_name uniqueness with null cohort
         user = User.objects.create_user('user1', first_name='First')
         user.save()
 
-        # User first_name must be unique
-        form = UserForm(data={'first_name': user.first_name})
+        form = UserForm(data={'first_name': user.first_name, 'cohort': user.cohort})
         self.assertFalse(form.is_valid())
 
-        form = UserForm(data={'first_name': 'something-else'})
+        form = UserForm(data={'first_name': 'adifferentname', 'cohort': user.cohort})
+        self.assertTrue(form.is_valid())
+
+        # Test with a non-null cohort
+        cohort = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+        )
+        user.cohort = cohort
+        user.save()
+
+        form = UserForm(data={'first_name': user.first_name, 'cohort': user.cohort.id})
+        self.assertFalse(form.is_valid())
+
+        form = UserForm(data={'first_name': 'adifferentname', 'cohort': user.cohort.id})
+        self.assertTrue(form.is_valid())
+
+        form = UserForm(data={'first_name': user.first_name, 'cohort': None})
         self.assertTrue(form.is_valid())
 
     def test_time_zone(self):

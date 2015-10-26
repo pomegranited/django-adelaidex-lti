@@ -77,11 +77,7 @@ class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
 
         # ensure no cookies set (other than csrf, possibly)
         cookies = self.selenium.get_cookies()
-        if len(cookies):
-            self.assertEqual(len(cookies), 1)
-            self.assertEqual(cookies[0]['name'], 'csrftoken')
-        else:
-            self.assertEqual(len(cookies), 0)
+        self.assertEqual(len(cookies), 0)
 
         # get enrol view, with next param set
         target = reverse('lti-user-profile')
@@ -113,11 +109,8 @@ class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
 
         # ensure no cookies set
         cookies = self.selenium.get_cookies()
-        if len(cookies):
-            self.assertEqual(len(cookies), 1)
-            self.assertEqual(cookies[0]['name'], 'csrftoken')
-        else:
-            self.assertEqual(len(cookies), 0)
+        self.assertEqual(len(cookies), 1)
+        self.assertEqual(cookies[0]['name'], 'csrftoken')
 
         # get enrol view, with next param set
         target = reverse('lti-user-profile')
@@ -779,8 +772,11 @@ class LTILoginEntryCohortTest(TestOverrideSettings, SeleniumTestCase):
         # verify that we've added a user
         self.assertEqual(num_users+1, get_user_model().objects.count())
 
-        # 2. Re-authenticate as the same user
+        # Ensure the new user gets a cohort
         current_user = get_user_model().objects.get(first_name='IMAUSER')
+        self.assertEqual(current_user.cohort, cohort2)
+
+        # 2. Re-authenticate as the same user
         user_id = current_user.username
         # remove the user prefix
         prefix = LTIAuthBackend.unknown_user_prefix
@@ -994,3 +990,164 @@ class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):
         user = get_user_model().objects.get(username=self.get_username('student'))
         self.assertEqual(user.first_name, '')
         self.assertEqual(user.time_zone, None)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+        'PERSIST_NAME': 'adelaidex', 
+        'PERSIST_PARAMS': ['next'],
+    })
+    def test_unique_nickname_in_cohort(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # create two cohorts
+        cohort = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+        )
+        cohort2 = Cohort.objects.create(
+            title='Test Cohort2',
+            oauth_key='mykey1',
+            oauth_secret='mysecret1',
+            login_url='http://google.com',
+        )
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, using the specified key
+        login_key_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_key', kwargs={'key': cohort.oauth_key}))
+        self.selenium.get(login_key_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the correct key was used
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), cohort.oauth_key)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a user
+        self.assertEqual(num_users+1, get_user_model().objects.count())
+
+        # Ensure the new user gets a cohort
+        current_user = get_user_model().objects.get(first_name='IMAUSER')
+        self.assertEqual(current_user.cohort, cohort)
+
+
+        # 2. Login a second new user, using the same cohort, and same nickname
+        self.performLogout()
+        self.selenium.get(login_key_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the correct key was used
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), cohort.oauth_key)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # Ensure error is shown
+        lis = self.selenium.find_elements_by_css_selector('.errorlist li')
+        self.assertEqual(len(lis), 1)
+        self.assertEqual(lis[0].text, 'Someone with this nickname already exists in your cohort. '
+                                      'Please try a different nickname.')
+
+        # Try a different username
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMANOTHERUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a second user
+        self.assertEqual(num_users+2, get_user_model().objects.count())
+
+
+        # 3. Login and create a third user account, using the other cohort key
+        self.performLogout()
+        login_key_url = '%s%s' % (self.live_server_url,
+                reverse('test_oauth_key', kwargs={'key': cohort2.oauth_key}))
+        self.selenium.get(login_key_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the correct key was used
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), cohort2.oauth_key)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should login and redirect to lti-entry
+        lti_entry = reverse('lti-entry')
+        lti_entry_url = '%s%s' % (self.live_server_url, lti_entry)
+        self.assertEqual(self.selenium.current_url, lti_entry_url)
+
+        # fill in welcome form, using the same username as the first user
+        first_name = self.selenium.find_element_by_id('id_first_name')
+        self.assertIsNotNone(first_name)
+        first_name.send_keys('IMAUSER')
+
+        save = self.selenium.find_element_by_id('save_user')
+        with wait_for_page_load(self.selenium):
+            save.click()
+
+        # and ensure we're redirected back to home
+        home_url = '%s%s' % (self.live_server_url, reverse('home'))
+        self.assertEqual(self.selenium.current_url, home_url)
+
+        # verify that we've added a third user
+        self.assertEqual(num_users+3, get_user_model().objects.count())
+
+        # Ensure there's two users with the same first_name
+        imausers = get_user_model().objects.filter(first_name='IMAUSER')
+        self.assertEqual(len(imausers), 2)
+        self.assertEqual(imausers[0].cohort, cohort)
+        self.assertEqual(imausers[1].cohort, cohort2)

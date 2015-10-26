@@ -6,6 +6,7 @@ from oauth2 import Request, Consumer, SignatureMethod_HMAC_SHA1 as SignatureMeth
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django_adelaidex.lti.models import Cohort
 
 
 class TestDisqusSSOView(TemplateView):
@@ -19,15 +20,32 @@ class TestOauthPostView(TemplateView):
     # Generate the parameters required for an OAUTH 1.0 request
     # http://tools.ietf.org/html/rfc5849
     def oauth_params(self, action, method='POST', uid=None, key=None):
+        secret = None
+        cohort = None
+        oauth_credentials = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {})
         if not key:
-            keys = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {}).keys()
-            if not keys:
-                return None
-            key = keys[0]
+            keys = oauth_credentials.keys()
+            if len(keys):
+                key = keys[0]
+            else:
+                cohort = Cohort.objects.first()
+                if cohort:
+                    key = cohort.oauth_key
+        if key:
+            if key in oauth_credentials:
+                secret = oauth_credentials.get(key)
+            else:
+                if not cohort:
+                    cohorts = Cohort.objects.filter(oauth_key=key).all()
+                    cohort = None
+                    if cohorts:
+                        cohort = cohorts[0]
+                if cohort:
+                    secret = cohort.oauth_secret
 
-        secret = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {}).get(key)
         if not secret:
             return None
+
         consumer = Consumer(key, secret)
 
         nonce = ''

@@ -31,9 +31,10 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         response = self.assertLogin(client, lti_login_path)
 
         self.assertEqual(self.user, response.context['user'])
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertIn('time_zone', response.context['form'].fields)
+        self.assertIn('cohort', response.context['form'].fields)
         self.assertEqual(self.user, response.context['form'].instance)
 
     def test_auth_post(self):
@@ -46,9 +47,10 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         response = client.post(lti_login_path)
 
         self.assertEqual(self.user, response.context['user'])
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertIn('time_zone', response.context['form'].fields)
+        self.assertIn('cohort', response.context['form'].fields)
         self.assertEqual(self.user, response.context['form'].instance)
 
     def test_nickname_post(self):
@@ -113,16 +115,18 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         form_data = {'first_name': ''}
         response = client.post(lti_login_path, form_data)
 
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
         form_data = {'first_name': '   '}
         response = client.post(lti_login_path, form_data)
 
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertEquals(u'Please enter a valid nickname.', response.context['form']['first_name'].errors[0])
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
     def test_set_is_staff(self):
 
@@ -401,7 +405,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
 
         # post to lti-entry, and ensure we're redirected back to target
         lti_entry = reverse('lti-entry')
-        lti_post_param = {'first_name': 'Username'}
+        lti_post_param = {'first_name': 'Username2'}
         response = client.post(lti_entry, lti_post_param)
         self.assertRedirects(response, target, status_code=302, target_status_code=200)
         
@@ -462,11 +466,13 @@ class UserProfileViewTest(UserSetUp, TestCase):
         response = client.post(profile_path, form_data)
         self.assertEqual(self.user, response.context['user'])
         self.assertEqual(self.user, response.context['form'].instance)
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertIn('time_zone', response.context['form'].fields)
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertIn('cohort', response.context['form'].fields)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
         form_data = {'first_name':'MyNickName'}
         response = client.post(profile_path, form_data)

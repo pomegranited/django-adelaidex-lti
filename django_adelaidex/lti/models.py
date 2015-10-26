@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.models import UserManager
+from django.core.exceptions import ValidationError
 
 from django_adelaidex.util.fields import NullableCharField
 from django_adelaidex.util.widgets import SelectTimeZoneWidget
@@ -77,7 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         validators=[
             validators.RegexValidator(r'^[\w.@+:-]+$', _('Enter a valid username.'), 'invalid'),
         ])
-    first_name = NullableCharField(_('nickname'), max_length=255, unique=True,
+    first_name = NullableCharField(_('nickname'), max_length=255,
             blank=True, null=True, default=None,
             help_text=_('255 characters or fewer. Letters, digits and '
                         '@/./+/-/_ only.'),
@@ -98,6 +99,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True, null=True, default=None,
         help_text=_('Timezone to use when displaying dates and times.'))
 
+    cohort = models.ForeignKey(Cohort, blank=True, null=True, default=None)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
@@ -106,6 +109,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
+        unique_together = ('first_name', 'cohort',)
         db_table = 'auth_user'
 
     def __unicode__(self):
@@ -146,7 +150,7 @@ def post_save(sender, instance=None, **kwargs):
 class UserForm(ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'time_zone',]
+        fields = ['first_name', 'time_zone', 'cohort', ]
         widgets = {
             'time_zone': SelectTimeZoneWidget,
         }
@@ -165,4 +169,10 @@ class UserForm(ModelForm):
     def clean_first_name(self):
         # Strip leading/trailing spaces from nickname
         first_name = self.cleaned_data.get('first_name', '').strip()
+
+        duplicate = User.objects.filter(cohort=self.instance.cohort,
+            first_name=first_name).exclude(id=self.instance.id)
+        if duplicate.exists():
+            raise ValidationError('Someone with this nickname already exists in your cohort. '
+                                  'Please try a different nickname.')
         return first_name

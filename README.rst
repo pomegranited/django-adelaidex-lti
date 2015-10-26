@@ -103,6 +103,14 @@ To create users on the standalone server::
         >>> staff.is_staff = True
         >>> staff.save()
 
+To run integration tests::
+
+Integration tests are run using the selenium library, which requires a browser
+to be installed.  We access this browser via an Xvfb session, configured to run
+on display port :0, on address 0.0.0.0:8080.
+
+    [root@loco ~]# sudo -u xvfb nohup /usr/bin/Xvfb :0 -screen 0 1024x768x24 &
+
 To run the tests::
 
     python manage.py test

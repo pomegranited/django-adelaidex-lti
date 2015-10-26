@@ -43,7 +43,7 @@ class DisqusSettingsTest(TestCase):
         self.assertEquals(response.context['DISQUS_SHORTNAME'], '')
 
     @override_settings(ADELAIDEX_LTI_DISQUS={'SHORTNAME':'notarealshortname'})
-    def test_not_set(self):
+    def test_override(self):
         client = Client()
         response = client.get(reverse('test-disqus-sso'))
         self.assertEquals(response.context['DISQUS_SHORTNAME'], settings.ADELAIDEX_LTI_DISQUS['SHORTNAME'])

@@ -20,6 +20,11 @@ class UserViewMixin(object):
         '''This view's object is the current user'''
         return get_object_or_404(self.model, pk=self.request.user.id)
 
+    def form_valid(self, form):
+        # Set cohort to current user's cohort
+        form.instance.cohort = self.request.user.cohort
+        return super(UserViewMixin, self).form_valid(form)
+
     def get_success_url(self, next_param=None, default='home'):
 
         url_name = default
