@@ -12,7 +12,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.models import UserManager
 from django.core.exceptions import ValidationError
 
-from django_adelaidex.util.fields import NullableCharField
+from django_adelaidex.util.fields import NullableCharField, UniqueBooleanField
 from django_adelaidex.util.widgets import SelectTimeZoneWidget
 
 
@@ -23,6 +23,7 @@ class Cohort(models.Model):
     title = models.CharField(_('title'), max_length=500,
         help_text=_('Required. Will be displayed to students as the "course name" on the login screen.'),
     )
+
     login_url = models.URLField(_('login url'), max_length=500,
         help_text=_('Required. Choose a URL in your course that displays the LTI component.'),
     )
@@ -45,6 +46,10 @@ class Cohort(models.Model):
         help_text=_('List of parameters sent by the LTI producer to this application, '
                     'which should be preserved during authentication. Put each parameter name on a new line.'),
         )
+
+    is_default = UniqueBooleanField(help_text=_('Optional. Cohort to use for non-authenticated users. '
+                                                'Only one Cohort can be the default.'))
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     modified_at = models.DateTimeField(auto_now=True, editable=False)
 

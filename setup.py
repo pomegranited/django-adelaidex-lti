@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-adelaidex-lti',
-    version='0.2',
+    version='0.3',
     packages=['django_adelaidex.lti'],
     include_package_data=True,
     license='Copyright The University of Adelaide, All rights reserved',
@@ -31,13 +31,14 @@ setup(
     install_requires=[
         'Django>=1.7',
         'pytz>=2015.2',
-        'django-adelaidex-util>=0.1',
+        'django-adelaidex-util>=0.3',
         'django-auth-lti==1.2.4',
     ],
     tests_require=[
         'selenium==2.48.0',
         'PyVirtualDisplay==0.1.5',
         'mock==1.0.1',
+        'coverage==4.0.1',
     ],
     dependency_links=[
         'http://lti-adx.adelaide.edu.au/pypi/django-auth-lti',

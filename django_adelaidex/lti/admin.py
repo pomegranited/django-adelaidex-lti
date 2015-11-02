@@ -10,6 +10,6 @@ admin.site.register(User, UserAdmin)
 
 
 class CohortAdmin(admin.ModelAdmin):
-    list_display = ('title', 'oauth_key',)
+    list_display = ('title', 'oauth_key','is_default',)
 
 admin.site.register(Cohort, CohortAdmin)

@@ -146,4 +146,4 @@ Build
 
 To build the pip package::
 
-    python setup.py 
+    python setup.py sdist
