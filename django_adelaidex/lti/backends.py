@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 
 from ims_lti_py.tool_provider import DjangoToolProvider
 from time import time
+import sys
 import logging
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,8 @@ class CohortLTIAuthBackend(LTIAuthBackend):
         cohort = None
         if cohorts:
             cohort = cohorts[0]
+
+        # Let settings.LTI_OAUTH_CREDENTIALS secret override the database cohort secret
         secret = oauth_credentials.get(request_key)
         if secret is None and cohort:
             secret = cohort.oauth_secret
@@ -66,9 +69,16 @@ class CohortLTIAuthBackend(LTIAuthBackend):
 
         logger.info("about to check the signature")
 
-        if not tool_provider.is_valid_request(request):
-            logger.error("Invalid request: signature check failed.")
-            raise PermissionDenied
+        valid = False
+        try:
+            valid = tool_provider.is_valid_request(request)
+        except:
+            logger.error(str(sys.exc_info()[0]))
+            valid = False
+        finally:
+            if not valid:
+                logger.error("Invalid request: signature check failed.")
+                raise PermissionDenied
 
         logger.info("done checking the signature")
 

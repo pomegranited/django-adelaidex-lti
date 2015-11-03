@@ -38,8 +38,8 @@ class LTILoginViewTest(TestOverrideSettings, SeleniumTestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_view(self):
 
@@ -68,7 +68,7 @@ class LTILoginViewTest(TestOverrideSettings, SeleniumTestCase):
         cookies = self.selenium.get_cookies()
         self.assertEqual(len(cookies), 2)
         self.assertEqual(cookies[0]['name'], 'csrftoken')
-        self.assertEqual(cookies[1]['name'], settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        self.assertEqual(cookies[1]['name'], 'adelaidex')
 
 
 class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
@@ -100,8 +100,8 @@ class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
 
     @override_settings(ADELAIDEX_LTI={
         'ENROL_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_view(self):
 
@@ -129,7 +129,7 @@ class LTIEnrolViewTest(TestOverrideSettings, SeleniumTestCase):
         self.selenium.get(target_url)
         cookies = self.selenium.get_cookies()
         self.assertEqual(len(cookies), 2)
-        self.assertEqual(cookies[0]['name'], settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        self.assertEqual(cookies[0]['name'], 'adelaidex')
 
 
 class LTIEntryViewTest(SeleniumTestCase):
@@ -197,9 +197,8 @@ class LTIEntryViewTest(SeleniumTestCase):
 
 class LTIInactiveEntryViewTest(InactiveUserSetUp, SeleniumTestCase):
 
-    @override_settings(ADELAIDEX_LTI={
-        'PERSIST_NAME': 'adelaidex',
-        'PERSIST_PARAMS': ['next'],
+    @override_settings(LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_default_view(self):
 
@@ -257,11 +256,223 @@ class LTIPermissionDeniedViewTest(TestOverrideSettings, SeleniumTestCase):
 class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
     '''Test the full LTI Login/Entry redirect cycle'''
 
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = {})
+    def test_no_oauth_key(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that no key was used
+        post_key = self.selenium.find_elements_by_name('oauth_consumer_key')
+        self.assertEquals(len(post_key), 0)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 'mykey': None })
+    def test_no_oauth_secret(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure no key was found
+        post_key = self.selenium.find_elements_by_name('oauth_consumer_key')
+        self.assertEquals(len(post_key), 0)
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' })
+    def test_bad_oauth_secret(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the key was found
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), 'mykey')
+
+        # And signature
+        post_sig = self.selenium.find_elements_by_name('oauth_signature')
+        self.assertEquals(len(post_sig), 1)
+
+        # Change the secret to something else
+        self.selenium.execute_script("document.getElementsByName('oauth_signature')[0].setAttribute('value', 'badsignature')");
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' })
+    def test_bad_oauth_timestamp(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the key was found
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), 'mykey')
+
+        # And timestamp
+        post_timestamp = self.selenium.find_elements_by_name('oauth_timestamp')
+        self.assertEquals(len(post_timestamp), 1)
+
+        # Change the timestamp to something else
+        self.selenium.execute_script("document.getElementsByName('oauth_timestamp')[0].setAttribute('value', '1')");
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' })
+    def test_remove_oauth_key(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the key was found
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), 'mykey')
+
+        # Remove the key
+        self.selenium.execute_script("var child = document.getElementsByName('oauth_consumer_key')[0]; child.parentNode.removeChild(child);");
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' })
+    def test_change_key(self):
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        # ensure we're logged out
+        self.performLogout()
+
+        # get current user count
+        num_users = get_user_model().objects.count()
+
+        # 1. Login and create a new user account, when no oauth credentials are available
+        login_url = '%s%s' % (self.live_server_url, reverse('test_oauth'))
+        self.selenium.get(login_url)
+        self.assertRegexpMatches(self.selenium.current_url, settings.ADELAIDEX_LTI['LOGIN_URL'])
+
+        # Ensure that the key was found
+        post_key = self.selenium.find_element_by_name('oauth_consumer_key')
+        self.assertEquals(post_key.get_attribute('value'), 'mykey')
+
+        # Change the key to something else
+        self.selenium.execute_script("document.getElementsByName('oauth_consumer_key')[0].setAttribute('value', '1')");
+
+        # Post oauth credentials to test_oauth by clicking 'Post' button
+        post_button = self.selenium.find_element_by_id('post_oauth')
+        post_button.click()
+
+        # Should fail login and redirect to lti-403
+        lti_403 = reverse('lti-403')
+        lti_403_url = '%s%s' % (self.live_server_url, lti_403)
+        self.assertEqual(self.selenium.current_url, lti_403_url)
+
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_user_profile_redirect(self):
         # url config is dependent on app settings, so reload
@@ -289,7 +500,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.selenium.get(target_url)
         cookies = self.selenium.get_cookies()
         self.assertEqual(len(cookies), 1)
-        self.assertEqual(cookies[0]['name'], settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        self.assertEqual(cookies[0]['name'], 'adelaidex')
 
         # lti-entry redirects to login
         lti_entry = reverse('lti-entry')
@@ -348,12 +559,10 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertTrue(True)
 
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-        LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    }, LTI_OAUTH_CREDENTIALS = { 
+        'adelaidex': 'mysecret' 
+    })
     def test_oauth(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -435,12 +644,10 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertTrue(True)
 
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-        LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    }, LTI_OAUTH_CREDENTIALS = { 
+        'adelaidex': 'mysecret' 
+    })
     def test_oauth_user(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -506,15 +713,12 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(num_users+1, get_user_model().objects.count())
 
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-        LTI_OAUTH_CREDENTIALS = { 
-            'mykey': 'mysecret', 
-            'mykey2': 'mysecret2',
-        },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 
+        'mykey': 'mysecret', 
+        'mykey2': 'mysecret2',
+    })
     def test_oauth_key(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -562,15 +766,12 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(num_users+1, get_user_model().objects.count())
 
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-        LTI_OAUTH_CREDENTIALS = { 
-            'mykey': 'mysecret', 
-            'mykey2': 'mysecret2',
-        },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    },
+    LTI_OAUTH_CREDENTIALS = { 
+        'mykey': 'mysecret', 
+        'mykey2': 'mysecret2',
+    })
     def test_oauth_user_key(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -643,11 +844,10 @@ class LTILoginEntryViewTest(TestOverrideSettings, SeleniumTestCase):
 
 class LTILoginEntryCohortTest(TestOverrideSettings, SeleniumTestCase):
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
+    })
     def test_oauth_cohort_key(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -708,11 +908,10 @@ class LTILoginEntryCohortTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(num_users+1, get_user_model().objects.count())
 
     @override_settings(ADELAIDEX_LTI={
-            'LOGIN_URL': reverse('test_oauth'),
-            'PERSIST_NAME': 'adelaidex', 
-            'PERSIST_PARAMS': ['next'],
-        },
-    )
+        'LOGIN_URL': reverse('test_oauth'),
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
+    })
     def test_oauth_cohort_user_key(self):
         # url config is dependent on app settings, so reload
         self.reload_urlconf()
@@ -962,9 +1161,8 @@ class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(user.first_name, form_data['first_name'])
         self.assertEqual(user.time_zone, 'UTC')
 
-    @override_settings(ADELAIDEX_LTI={
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    @override_settings(LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_cancel_post_custom_next(self):
         next_path = reverse('lti-inactive')
@@ -993,8 +1191,8 @@ class UserProfileViewTest(TestOverrideSettings, SeleniumTestCase):
 
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL': reverse('test_oauth'),
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_unique_nickname_in_cohort(self):
         # url config is dependent on app settings, so reload

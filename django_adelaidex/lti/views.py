@@ -18,7 +18,10 @@ class UserViewMixin(object):
 
     def get_object(self):
         '''This view's object is the current user'''
-        return get_object_or_404(self.model, pk=self.request.user.id)
+        if self.request.user.is_authenticated():
+            return get_object_or_404(self.model, pk=self.request.user.id)
+        else:
+            return HttpResponseRedirect(reverse('lti-403'))
 
     def form_valid(self, form):
         # Set cohort to current user's cohort
@@ -65,16 +68,7 @@ class LTIInactiveView(CSRFExemptMixin, TemplatePathMixin, TemplateView):
     template_name = TemplatePathMixin.prepend_template_path('lti-inactive.html')
 
 
-class LTIPersistMixin(object):
-
-    def lti_settings(self, key=None, default=None):
-        adelaidex_lti = getattr(settings, 'ADELAIDEX_LTI', {})
-        if key:
-            return adelaidex_lti.get(key, default)
-        return adelaidex_lti
-
-
-class LTIRedirectView(LTIPersistMixin, RedirectView):
+class LTIRedirectView(RedirectView):
 
     # Send 302, in case we need to change anything
     permanent=False
@@ -90,11 +84,12 @@ class LTIRedirectView(LTIPersistMixin, RedirectView):
 
         # Store the given persistent parameters, serialized, in a cookie,
         # if configured to do so.
-        cookie_name = self.lti_settings('PERSIST_NAME')
+        cohort = Cohort.objects.get_current(self.request)
+        cookie_name = cohort.oauth_key if cohort else None
         if cookie_name:
             store_params = {}
-            persist_params = self.lti_settings('PERSIST_PARAMS', [REDIRECT_FIELD_NAME])
-            for key in persist_params:
+            persist_params = [REDIRECT_FIELD_NAME]
+            for key in persist_params + cohort.persist_params:
                 store_params[key] = self.request.GET.get(key)
 
             try:
@@ -109,7 +104,21 @@ class LTIRedirectView(LTIPersistMixin, RedirectView):
         return self.redirect_url
 
 
-class LTIEntryView(LTIPersistMixin, UserViewMixin, CSRFExemptMixin, LTIUtilityMixin, TemplatePathMixin, UpdateView):
+class LTILoginRedirectView(LTIRedirectView):
+
+    def get_redirect_url(self):
+        cohort = Cohort.objects.get_current(self.request)
+        return cohort.login_url if cohort else None
+
+
+class LTIEnrolRedirectView(LTIRedirectView):
+
+    def get_redirect_url(self):
+        cohort = Cohort.objects.get_current(self.request)
+        return cohort.enrol_url if cohort else None
+
+
+class LTIEntryView(UserViewMixin, CSRFExemptMixin, LTIUtilityMixin, TemplatePathMixin, UpdateView):
 
     TemplatePathMixin.template_dir = 'django_adelaidex_lti'
     template_name = TemplatePathMixin.prepend_template_path('lti-entry.html')
@@ -128,13 +137,15 @@ class LTIEntryView(LTIPersistMixin, UserViewMixin, CSRFExemptMixin, LTIUtilityMi
            (and we're not trying to POST an update).'''
 
         self.object = self.get_object()
-        if self.request.user.is_authenticated() and self.request.user.is_active:
-            if not 'first_name' in self.request.POST and self.object.first_name:
-                return HttpResponseRedirect(self.get_success_url())
-            else:
-                return super(LTIEntryView, self).post(request, *args, **kwargs)
-
-        return HttpResponseRedirect(reverse('lti-inactive'))
+        if self.request.user.is_authenticated():
+            if self.request.user.is_active:
+                if not 'first_name' in self.request.POST and self.object.first_name:
+                    return HttpResponseRedirect(self.get_success_url())
+                else:
+                    return super(LTIEntryView, self).post(request, *args, **kwargs)
+            return HttpResponseRedirect(reverse('lti-inactive'))
+        else:
+            return HttpResponseRedirect(reverse('lti-403'))
 
     def form_valid(self, form):
         '''Set is_staff setting based on LTI User roles'''
@@ -149,7 +160,8 @@ class LTIEntryView(LTIPersistMixin, UserViewMixin, CSRFExemptMixin, LTIUtilityMi
 
         # clear out the persistent LTI parameters; 
         # they've been used by get_success_url()
-        cookie_name = self.lti_settings('PERSIST_NAME')
+        cohort = Cohort.objects.get_current(self.request)
+        cookie_name = cohort.oauth_key if cohort else None
         if cookie_name:
             response.delete_cookie(cookie_name)
 
@@ -160,7 +172,8 @@ class LTIEntryView(LTIPersistMixin, UserViewMixin, CSRFExemptMixin, LTIUtilityMi
 
         # See if this request started from an LTIRedirectView, and so has a cookie.
         next_param = None
-        cookie_name = self.lti_settings('PERSIST_NAME', '')
+        cohort = Cohort.objects.get_current(self.request)
+        cookie_name = cohort.oauth_key if cohort else None
         cookie = self.request.COOKIES.get(cookie_name)
         if cookie:
             try:

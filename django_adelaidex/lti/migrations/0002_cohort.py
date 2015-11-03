@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('enrol_url', models.URLField(default=None, max_length=500, blank=True, help_text='Optional. Provide a URL for students to enrol in your course.', null=True, verbose_name='enrol url')),
                 ('oauth_key', models.CharField(help_text='Required. 255 characters or fewer, but must be unique. Letters, digits and .+:_- only.', unique=True, max_length=255, verbose_name='oauth key', validators=[django.core.validators.RegexValidator(b'^[\\w.@+:-]+$', 'Enter a valid oauth key.', b'invalid')])),
                 ('oauth_secret', models.CharField(help_text='Required. 255 characters or fewer. Letters, digits, spaces and .+:_- only.', unique=True, max_length=255, verbose_name='oauth secret', validators=[django.core.validators.RegexValidator(b'^[\\w\\s.@+:-]+$', 'Enter a valid oauth secret.', b'invalid')])),
-                ('persist_params', models.TextField(default=None, help_text='List of parameters sent by the LTI producer to this application, which should be preserved during authentication. Put each parameter name on a new line.', null=True, verbose_name='persistent parameters', blank=True)),
+                ('_persist_params', models.TextField(default=None, help_text='List of parameters sent by the LTI producer to this application, which should be preserved during authentication. Put each parameter name on a new line.', null=True, verbose_name='persistent parameters', blank=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('modified_at', models.DateTimeField(auto_now=True)),
             ],

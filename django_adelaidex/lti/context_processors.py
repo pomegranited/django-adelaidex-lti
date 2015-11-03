@@ -6,13 +6,18 @@ import hmac
 import json
 import time
 
+from django_adelaidex.lti.models import Cohort
+
 
 def lti_settings(request):
     '''
     Adds LTI-related settings to the context.
     '''
-    adelaidex_lti = getattr(settings, 'ADELAIDEX_LTI', {})
-    lti = {'ADELAIDEX_LTI_LINK_TEXT': adelaidex_lti.get('LINK_TEXT', '')}
+    cohort = Cohort.objects.get_current()
+    if cohort:
+        lti = {'ADELAIDEX_LTI_LINK_TEXT': cohort.title}
+    else:
+        lti = {'ADELAIDEX_LTI_LINK_TEXT': ''}
 
     query_string = request.META.get('QUERY_STRING', '')
     if query_string:

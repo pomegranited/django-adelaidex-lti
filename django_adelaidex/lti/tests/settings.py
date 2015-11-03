@@ -48,8 +48,8 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend', # Django's default auth backend
     'django_adelaidex.lti.backends.CohortLTIAuthBackend',
+    'django.contrib.auth.backends.ModelBackend', # Django's default auth backend
 ]
 
 TIME_ZONE = 'UTC'
@@ -74,6 +74,6 @@ FIXTURE_DIRS = (
 
 ROOT_URLCONF = 'django_adelaidex.lti.tests.urls'
 
-ADELAIDEX_LTI = {
-    'STAFF_MEMBER_GROUP': 1,
-}
+ADELAIDEX_LTI_STAFF_MEMBER_GROUP = 1
+
+#LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' }

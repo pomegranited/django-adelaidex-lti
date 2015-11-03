@@ -5,9 +5,12 @@ from django.core.urlresolvers import reverse_lazy
 
 from django_adelaidex.lti.views import LTIPermissionDeniedView
 from django_adelaidex.lti.tests.views import TestDisqusSSOView, TestOauthPostView
+from django_adelaidex.lti.models import Cohort
 
 from django.contrib import admin
 admin.autodiscover()
+
+cohort = Cohort.objects.get_current()
 
 urlpatterns = patterns('',
     url(r'^/?$', LTIPermissionDeniedView.as_view(), name='home'),
@@ -17,7 +20,7 @@ urlpatterns = patterns('',
     # Decide whether to use auth login or django_adelaidex.lti as the 'login' url
     url(r'^login/$',
         LTIPermissionDeniedView.as_view(),
-        name='login') if getattr(settings, 'ADELAIDEX_LTI', {}).get('LOGIN_URL') 
+        name='login') if cohort and cohort.login_url
     else
     url(r'^login/$', auth_views.login,
         {'template_name': 'login.html'},

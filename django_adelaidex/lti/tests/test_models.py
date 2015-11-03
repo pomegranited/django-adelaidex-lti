@@ -4,8 +4,86 @@ from django.core.management import call_command
 from django.test.utils import override_settings
 from django.conf import settings
 from django.db import IntegrityError
+from mock import Mock
 
 from django_adelaidex.lti.models import Cohort, User, UserManager, UserForm
+
+
+class CohortManagerTests(TestCase):
+
+    def test_no_default(self):
+        cohort = Cohort.objects.get_current()
+        self.assertIsNone(cohort)
+
+    @override_settings(ADELAIDEX_LTI={
+        'LINK_TEXT': 'Link Text',
+        'LOGIN_URL': 'https://google.com',
+        'ENROL_URL': 'https://google.com/enrol',
+    }, LTI_OAUTH_CREDENTIALS={
+        'mykey': 'mysecret'
+    })
+    def test_settings_default(self):
+        '''Ensure backwards compatibility'''
+        cohort = Cohort.objects.get_current()
+        self.assertIsNotNone(cohort)
+        self.assertEquals(cohort.title, 'Link Text')
+        self.assertEquals(cohort.login_url, 'https://google.com')
+        self.assertEquals(cohort.enrol_url, 'https://google.com/enrol')
+        self.assertEquals(cohort.persist_params, [])
+        self.assertEquals(cohort.is_default, True)
+        self.assertEquals(cohort.oauth_key, 'mykey')
+        self.assertEquals(cohort.oauth_secret, 'mysecret')
+
+    def test_real_default(self):
+        cohort1 = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+        )
+        cohort2 = Cohort.objects.create(
+            title='Test Cohort',
+            oauth_key='mykey2',
+            oauth_secret='mysecret2',
+            login_url='http://google.com',
+            is_default=True
+        )
+
+        cohort = Cohort.objects.get_current()
+        self.assertEquals(cohort, cohort2)
+
+        cohort1.is_default = True
+        cohort1.save()
+        cohort = Cohort.objects.get_current()
+        self.assertEquals(cohort, cohort1)
+
+    def test_no_user(self):
+        request = Mock()
+        request.user = None
+        cohort = Cohort.objects.get_current(request)
+        self.assertIsNone(cohort)
+
+    def test_anonymous_user(self):
+        request = Mock()
+        request.user = Mock()
+        request.user.is_authenticated = lambda : False
+        cohort = Cohort.objects.get_current(request)
+        self.assertIsNone(cohort)
+
+    def test_authenticated_user(self):
+        request = Mock()
+        request.user = Mock()
+        request.user.is_authenticated = lambda : True
+        request.user.cohort = Cohort(
+            title='User Cohort',
+            oauth_key='mykey',
+            oauth_secret='mysecret',
+            login_url='http://google.com',
+            is_default=True
+        )
+
+        cohort = Cohort.objects.get_current(request)
+        self.assertEquals(cohort, request.user.cohort)
 
 
 class CohortTests(TestCase):
@@ -29,6 +107,13 @@ class CohortTests(TestCase):
             str(cohort),
             'Test Cohort (mykey2)'
         )
+    
+    def test_persist_params(self):
+        cohort = Cohort.objects.create()
+        self.assertEquals(cohort.persist_params, [])
+
+        cohort._persist_params = "abc\ndef\nghi"
+        self.assertEquals(cohort.persist_params, ['abc', 'def', 'ghi'])
 
 
 class UserManagerTests(TestCase):

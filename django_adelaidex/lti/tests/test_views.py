@@ -275,8 +275,8 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     @override_settings(LOGIN_URL='lti-403')
     def test_view(self):
@@ -286,7 +286,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
         client = Client()
 
         # ensure no cookies set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # get login view, with next param set
@@ -300,7 +300,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
 
         # ensure cookie was set
         response = client.get(target)
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
 
@@ -309,8 +309,8 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
         'ENROL_URL':'https://www.edx.org', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_view(self):
 
@@ -318,7 +318,7 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
         client = Client()
 
         # ensure no cookies set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # get enrol view, with next param set
@@ -332,7 +332,7 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
 
         # ensure cookie was set
         response = client.get(target)
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
 
@@ -371,8 +371,8 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     @override_settings(LOGIN_URL='lti-403')
     def test_login_redirect(self):
@@ -386,7 +386,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         client.logout()
 
         # ensure we've got no LTI cookie set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # visit the lti login redirect url, with the target in the querystring
@@ -397,7 +397,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         self.assertRedirects(response, settings.ADELAIDEX_LTI['LOGIN_URL'], status_code=302, target_status_code=200)
 
         # ensure cookies were set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
         # login, to bypass the LTI auth
