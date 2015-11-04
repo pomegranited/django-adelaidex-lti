@@ -32,7 +32,6 @@ setup(
         'Django>=1.7',
         'pytz>=2015.2',
         'django-adelaidex-util>=0.3',
-        'django-auth-lti==1.2.4',
     ],
     tests_require=[
         'selenium==2.48.0',
