@@ -78,7 +78,7 @@ To set up the virtualenv::
 
     virtualenv .virtualenv
     source .virtualenv/bin/activate
-    pip install --extra-index-url=http://lti-adx.adelaide.edu.au/pypi/ -U -r django_adelaidex/lti/tests/pip.txt 
+    pip install --extra-index-url=https://lti-adx.adelaide.edu.au/pypi/ -U -r django_adelaidex/lti/tests/pip.txt 
     sudo find .virtualenv/lib/python2.7/site-packages -name \*.so -exec chcon -t shlib_t {} \;
 
 Use the data fixtures to load the initial staff users list:
@@ -113,11 +113,11 @@ on display port :0, on address 0.0.0.0:8080.
 
 To run the tests::
 
-    python manage.py test
+    ./manage.py test
 
 To check coverage::
 
-    coverage run --include=django_adelaidex/*  python manage.py test     
+    coverage run --include=django_adelaidex/*  ./manage.py test     
 
     Name                                                Stmts   Miss  Cover
     -----------------------------------------------------------------------
