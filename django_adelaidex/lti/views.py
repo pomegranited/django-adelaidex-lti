@@ -84,7 +84,7 @@ class LTIRedirectView(RedirectView):
 
         # Store the given persistent parameters, serialized, in a cookie,
         # if configured to do so.
-        cohort = Cohort.objects.get_current(self.request)
+        cohort = Cohort.objects.get_current(self.request.user)
         cookie_name = cohort.oauth_key if cohort else None
         if cookie_name:
             store_params = {}
@@ -107,14 +107,14 @@ class LTIRedirectView(RedirectView):
 class LTILoginRedirectView(LTIRedirectView):
 
     def get_redirect_url(self):
-        cohort = Cohort.objects.get_current(self.request)
+        cohort = Cohort.objects.get_current(self.request.user)
         return cohort.login_url if cohort else None
 
 
 class LTIEnrolRedirectView(LTIRedirectView):
 
     def get_redirect_url(self):
-        cohort = Cohort.objects.get_current(self.request)
+        cohort = Cohort.objects.get_current(self.request.user)
         return cohort.enrol_url if cohort else None
 
 
@@ -160,7 +160,7 @@ class LTIEntryView(UserViewMixin, CSRFExemptMixin, LTIUtilityMixin, TemplatePath
 
         # clear out the persistent LTI parameters; 
         # they've been used by get_success_url()
-        cohort = Cohort.objects.get_current(self.request)
+        cohort = Cohort.objects.get_current(self.request.user)
         cookie_name = cohort.oauth_key if cohort else None
         if cookie_name:
             response.delete_cookie(cookie_name)
@@ -172,7 +172,7 @@ class LTIEntryView(UserViewMixin, CSRFExemptMixin, LTIUtilityMixin, TemplatePath
 
         # See if this request started from an LTIRedirectView, and so has a cookie.
         next_param = None
-        cohort = Cohort.objects.get_current(self.request)
+        cohort = Cohort.objects.get_current(self.request.user)
         cookie_name = cohort.oauth_key if cohort else None
         cookie = self.request.COOKIES.get(cookie_name)
         if cookie:

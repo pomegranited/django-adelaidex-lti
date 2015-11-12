@@ -18,40 +18,13 @@ class TimezoneMiddleware(object):
         return None
 
 
-class CurrentCohortMiddleware(object):
-    '''Cache Cohort.objects.get_current() for the current thread,
-       so it needn't be calculated more than once.
-       
-       Modeled on django-cuser: https://github.com/Alir3z4/django-cuser/
-    '''
-
-    __cohorts = {}
+class AnonymousCohortMiddleware(object):
+    '''Give anonymous users the default cohort, 
+       to avoid fetching it many times from the database.'''
 
     def process_request(self, request):
-        '''Store current cohort'''
-        cohort = Cohort.objects.get_current(request)
-        self.__class__.set_cohort(cohort)
-
-    def process_response(self, request, response):
-        '''Delete current cohort'''
-        self.__class__.del_cohort()
-        return response
-
-    def process_exception(self, request, *args, **kwargs):
-        '''Delete current cohort'''
-        self.__class__.del_cohort()
-
-    @classmethod
-    def get_cohort(cls, default=None):
-        '''Retrieve current cohort'''
-        return cls.__cohorts.get(threading.current_thread(), default)
-
-    @classmethod
-    def set_cohort(cls, cohort):
-        '''Store current cohort'''
-        cls.__cohorts[threading.current_thread()] = cohort
-
-    @classmethod
-    def del_cohort(cls):
-        '''Delete current cohort'''
-        cls.__cohorts.pop(threading.current_thread(), None)
+        user = request.user
+        if user and not user.is_authenticated():
+            '''Store current, default cohort against the user'''
+            cohort = Cohort.objects.get_current(user)
+            setattr(user, 'cohort', cohort)

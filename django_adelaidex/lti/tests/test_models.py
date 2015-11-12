@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.core import mail
 from django.core.management import call_command
+from django.contrib.auth.models import AnonymousUser
 from django.test.utils import override_settings
 from django.conf import settings
 from django.db import IntegrityError
@@ -60,14 +61,14 @@ class CohortManagerTests(TestCase):
     def test_no_user(self):
         request = Mock()
         request.user = None
-        cohort = Cohort.objects.get_current(request)
+        cohort = Cohort.objects.get_current(request.user)
         self.assertIsNone(cohort)
 
     def test_anonymous_user(self):
         request = Mock()
-        request.user = Mock()
-        request.user.is_authenticated = lambda : False
-        cohort = Cohort.objects.get_current(request)
+        request.user = AnonymousUser()
+        request.user.is_authenticated = lambda : True
+        cohort = Cohort.objects.get_current(request.user)
         self.assertIsNone(cohort)
 
     def test_authenticated_user(self):
@@ -82,7 +83,7 @@ class CohortManagerTests(TestCase):
             is_default=True
         )
 
-        cohort = Cohort.objects.get_current(request)
+        cohort = Cohort.objects.get_current(request.user)
         self.assertEquals(cohort, request.user.cohort)
 
 

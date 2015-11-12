@@ -13,7 +13,7 @@ def lti_settings(request):
     '''
     Adds LTI-related settings to the context.
     '''
-    cohort = Cohort.objects.get_current()
+    cohort = Cohort.objects.get_current(request.user)
     if cohort:
         lti = {'ADELAIDEX_LTI_LINK_TEXT': cohort.title}
     else:

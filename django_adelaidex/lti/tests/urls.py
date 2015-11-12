@@ -10,7 +10,7 @@ from django_adelaidex.lti.models import Cohort
 from django.contrib import admin
 admin.autodiscover()
 
-cohort = Cohort.objects.get_current()
+default_cohort = Cohort.objects.get_current()
 
 urlpatterns = patterns('',
     url(r'^/?$', LTIPermissionDeniedView.as_view(), name='home'),
@@ -20,7 +20,7 @@ urlpatterns = patterns('',
     # Decide whether to use auth login or django_adelaidex.lti as the 'login' url
     url(r'^login/$',
         LTIPermissionDeniedView.as_view(),
-        name='login') if cohort and cohort.login_url
+        name='login') if default_cohort and default_cohort.login_url
     else
     url(r'^login/$', auth_views.login,
         {'template_name': 'login.html'},

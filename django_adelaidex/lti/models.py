@@ -19,16 +19,16 @@ from django_adelaidex.util.widgets import SelectTimeZoneWidget
 
 class CohortManager(models.Manager):
 
-    def get_current(self, request=None):
-        '''Return the current user's cohort, if set;
+    def get_current(self, user=None):
+        '''Return the user's cohort, if set;
            or the default cohort, if found in the database;
            or a cohort constructed from ADELAIDEX_LTI settings, if found;
            or None all else fails.'''
 
         current = None
 
-        if request and request.user and request.user.is_authenticated():
-            current = request.user.cohort
+        if user and hasattr(user, 'cohort'):
+            current = user.cohort
 
         if not current:
             default = self.filter(is_default=True)

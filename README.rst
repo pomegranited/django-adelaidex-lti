@@ -35,6 +35,7 @@ Usage
         ...
         'django_auth_lti.middleware.LTIAuthMiddleware',
         'django_adelaidex.lti.middleware.TimezoneMiddleware',
+        'django_adelaidex.lti.middleware.AnonymousCohortMiddleware',
     )
 
 4. Add django\_adelaidex.lti.context\_processors to TEMPLATE\_CONTEXT\_PROCESSORS::

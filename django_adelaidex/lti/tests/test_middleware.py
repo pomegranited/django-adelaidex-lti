@@ -1,12 +1,13 @@
 from django.test import TestCase
 from django.utils import timezone
 from django.contrib import auth
+from django.contrib.auth.models import AnonymousUser
 from django.test.client import Client
 from django.test.utils import override_settings
 import pytz
 from mock import Mock
 
-from django_adelaidex.lti.middleware import TimezoneMiddleware, CurrentCohortMiddleware
+from django_adelaidex.lti.middleware import TimezoneMiddleware, AnonymousCohortMiddleware
 
 
 class TimezoneMiddlewareTest(TestCase):
@@ -56,57 +57,64 @@ class TimezoneMiddlewareTest(TestCase):
         self.assertEqual(timezone.get_current_timezone(), pytz.timezone(self.request.user.time_zone))
 
 
-class CurrentCohortMiddlewareTest(TestCase):
+class AnonymousCohortMiddlewareTest(TestCase):
 
     def setUp(self):
-        super(CurrentCohortMiddlewareTest, self).setUp()
-        self.ccm = CurrentCohortMiddleware()
+        super(AnonymousCohortMiddlewareTest, self).setUp()
+        self.acm = AnonymousCohortMiddleware()
         self.request = Mock()
-        self.request.user = None
-        self.response = Mock()
-        self.cohort = Mock()
 
-    def test_no_cohort(self):
-        self.assertIsNone(self.ccm.process_request(self.request))
-        self.assertIsNone(self.ccm.get_cohort())
-        self.assertEquals(self.ccm.process_response(self.request, self.response), self.response)
-        self.assertIsNone(self.ccm.get_cohort())
-
-    def test_set_cohort(self):
-        self.assertIsNone(self.ccm.process_request(self.request))
-        self.assertIsNone(self.ccm.get_cohort())
-
-        self.ccm.set_cohort(self.cohort)
-        self.assertEquals(self.ccm.get_cohort(), self.cohort)
-
-        self.assertEquals(self.ccm.process_response(self.request, self.response), self.response)
-        self.assertIsNone(self.ccm.get_cohort())
-
-    def test_del_cohort(self):
-        self.assertIsNone(self.ccm.process_request(self.request))
-        self.assertIsNone(self.ccm.get_cohort())
-
-        self.ccm.set_cohort(self.cohort)
-        self.assertEquals(self.ccm.get_cohort(), self.cohort)
-
-        self.ccm.del_cohort()
-        self.assertIsNone(self.ccm.get_cohort())
-
-    def test_process_exception(self):
-        self.assertIsNone(self.ccm.process_request(self.request))
-        self.assertIsNone(self.ccm.get_cohort())
-
-        self.ccm.set_cohort(self.cohort)
-        self.assertEquals(self.ccm.get_cohort(), self.cohort)
-
-        self.assertIsNone(self.ccm.process_exception(self.request))
-        self.assertIsNone(self.ccm.get_cohort())
+    def test_anonymous_no_cohort(self):
+        self.request.user = AnonymousUser()
+        self.assertFalse(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.request.user.cohort)
 
     @override_settings(ADELAIDEX_LTI={'LINK_TEXT': 'Hi there'})
-    def test_cohort(self):
-        self.assertIsNone(self.ccm.process_request(self.request))
-        cohort = self.ccm.get_cohort()
-        self.assertIsNotNone(cohort)
-        self.assertEquals(cohort.title, 'Hi there')
-        self.assertEquals(self.ccm.process_response(self.request, self.response), self.response)
-        self.assertIsNone(self.ccm.get_cohort())
+    def test_anonymous_default_cohort(self):
+        self.request.user = AnonymousUser()
+        self.assertFalse(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNotNone(self.request.user.cohort)
+        self.assertEquals(self.request.user.cohort.title, 'Hi there')
+
+    def test_authenticated_no_cohort(self):
+        self.request.user = AnonymousUser()
+        self.request.user.is_authenticated = lambda : True
+        setattr(self.request.user, 'cohort', None)
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertIsNone(self.request.user.cohort)
+
+    def test_authenticated_own_cohort(self):
+        self.request.user = AnonymousUser()
+        self.request.user.is_authenticated = lambda : True
+        own_cohort = Mock()
+        setattr(self.request.user, 'cohort', own_cohort)
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertIsNotNone(self.request.user.cohort)
+        self.assertEquals(self.request.user.cohort, own_cohort)
+
+    @override_settings(ADELAIDEX_LTI={'LINK_TEXT': 'Hi there'})
+    def test_authenticated_default_cohort(self):
+        self.request.user = AnonymousUser()
+        self.request.user.is_authenticated = lambda : True
+        setattr(self.request.user, 'cohort', None)
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertIsNone(self.request.user.cohort)
+
+    @override_settings(ADELAIDEX_LTI={'LINK_TEXT': 'Hi there'})
+    def test_authenticated_default_own_cohort(self):
+        self.request.user = AnonymousUser()
+        self.request.user.is_authenticated = lambda : True
+        own_cohort = Mock()
+        setattr(self.request.user, 'cohort', own_cohort)
+        self.assertTrue(hasattr(self.request.user, 'cohort'))
+        self.assertIsNone(self.acm.process_request(self.request))
+        self.assertIsNotNone(self.request.user.cohort)
+        self.assertEquals(self.request.user.cohort, own_cohort)
+
