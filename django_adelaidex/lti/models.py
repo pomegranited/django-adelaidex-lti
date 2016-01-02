@@ -1,4 +1,4 @@
-from django.db import models, IntegrityError
+from django.db import models, transaction, IntegrityError
 from django.db.models import signals
 from django.dispatch import receiver
 from django.forms import ModelForm
@@ -100,7 +100,8 @@ def post_save(sender, instance=None, **kwargs):
     if staff_group:
         if instance.is_staff:
             try:
-                instance.groups.add(staff_group)
+                with transaction.atomic():
+                    instance.groups.add(staff_group)
             except IntegrityError:
                 # something is wrong with my user_groups migration
                 pass
