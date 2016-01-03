@@ -8,7 +8,7 @@ import django.core.validators
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('lti', '0001_initial'),
+        ('lti', '0002_auto_20151230_1212'),
     ]
 
     operations = [

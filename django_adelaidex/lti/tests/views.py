@@ -13,6 +13,10 @@ class TestDisqusSSOView(TemplateView):
     template_name='disqus_sso.html'
 
 
+class TestDisqusSSOView(TemplateView):
+    template_name='disqus_sso.html'
+
+
 class TestOauthPostView(TemplateView):
 
     template_name = 'oauth.html'

@@ -8,7 +8,7 @@ import django_adelaidex.util.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('lti', '0004_auto_20151023_1224'),
+        ('lti', '0005_auto_20151023_1224'),
     ]
 
     operations = [

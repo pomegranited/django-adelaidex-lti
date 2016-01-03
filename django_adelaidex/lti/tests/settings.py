@@ -7,7 +7,6 @@ SECRET_KEY = 'notagoodsecret'
 
 # Runs via ./manage.py test
 DEBUG = True
-TEMPLATE_DEBUG = True
 ALLOWED_HOSTS = ['*']
 STATIC_URL = '/static/'
 LOGIN_URL = 'login'
@@ -56,17 +55,25 @@ TIME_ZONE = 'UTC'
 
 AUTH_USER_MODEL = 'lti.User'
 
-TEMPLATE_DIRS = (
-    os.path.join(BASE_DIR, 'templates'),
-    os.path.join(BASE_DIR, 'tests', 'templates'),
-)
-TEMPLATE_CONTEXT_PROCESSORS = (
-    'django.core.context_processors.request',
-    'django.contrib.auth.context_processors.auth',
-    'django_adelaidex.lti.context_processors.lti_settings',
-    'django_adelaidex.lti.context_processors.disqus_settings',
-    'django_adelaidex.lti.context_processors.disqus_sso',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'tests', 'templates'),
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django_adelaidex.lti.context_processors.lti_settings',
+                'django_adelaidex.lti.context_processors.disqus_settings',
+                'django_adelaidex.lti.context_processors.disqus_sso',
+            ],
+        },
+    },
+]
 
 FIXTURE_DIRS = (
     os.path.join(BASE_DIR, 'tests', 'fixtures'),

@@ -124,7 +124,7 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         response = client.post(lti_login_path, form_data)
 
         self.assertEqual(3, len(response.context['form'].fields))
-        self.assertEquals(u'Please enter a valid nickname.', response.context['form']['first_name'].errors[0])
+        self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertEquals([], response.context['form']['time_zone'].errors)
         self.assertEquals([], response.context['form']['cohort'].errors)
 
@@ -278,7 +278,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
     }, LTI_OAUTH_CREDENTIALS={
         'adelaidex': 'mysecret'
     })
-    @override_settings(LOGIN_URL='lti-403')
+    @override_settings(LOGIN_URL=reverse('lti-403'))
     def test_view(self):
 
         self.reload_urlconf()
@@ -343,7 +343,7 @@ class LTIPermissionDeniedViewTest(TestOverrideSettings, TestCase):
         'LOGIN_URL':'https://www.google.com.au', 
         'LINK_TEXT': 'Course name Here',
     })
-    @override_settings(LOGIN_URL='lti-403')
+    @override_settings(LOGIN_URL=reverse('lti-403'))
     def test_view(self):
 
         self.reload_urlconf()
@@ -374,7 +374,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
     }, LTI_OAUTH_CREDENTIALS={
         'adelaidex': 'mysecret'
     })
-    @override_settings(LOGIN_URL='lti-403')
+    @override_settings(LOGIN_URL=reverse('lti-403'))
     def test_login_redirect(self):
 
         # url config is dependent on app settings, so reload
@@ -422,6 +422,65 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
 
         self.assertTrue(True)
 
+    # Set the LTI Login Url, and use lti-403 as the login URL
+    @override_settings(ADELAIDEX_LTI={
+        'LOGIN_URL':'https://www.google.com.au', 
+        'STAFF_MEMBER_GROUP': 1,
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
+    })
+    @override_settings(LOGIN_URL='lti-403')
+    def test_login_staff_redirect(self):
+
+        # url config is dependent on app settings, so reload
+        self.reload_urlconf()
+
+        client = Client()
+
+        # ensure we're logged out
+        client.logout()
+
+        # ensure we've got no LTI cookie set
+        cookie = client.cookies.get('adelaidex')
+        self.assertIsNone(cookie)
+
+        # visit the lti login redirect url, with the target in the querystring
+        target = reverse('lti-user-profile')
+        querystr = '?next=' + target
+        lti_login = reverse('lti-login') + querystr
+        response = client.get(lti_login)
+        self.assertRedirects(response, settings.ADELAIDEX_LTI['LOGIN_URL'], status_code=302, target_status_code=200)
+
+        # ensure cookies were set
+        cookie = client.cookies.get('adelaidex')
+        self.assertIsNotNone(cookie)
+
+        # login, to bypass the LTI auth
+        client.login(username=self.get_username('staff'), password=self.get_password('staff'))
+
+        # Ensure the "staff only" flag is on
+        lti_entry = reverse('lti-entry')
+        response = client.get(lti_entry)
+        self.assertTrue(response.context['object'].is_staff)
+
+        # post to lti-entry, and ensure we're redirected back to target
+        lti_post_param = {'first_name': 'Username'}
+        response = client.post(lti_entry, lti_post_param)
+        self.assertRedirects(response, target, status_code=302, target_status_code=200)
+        
+        # ensure the cookie has cleared by revisiting lti-entry, and ensuring
+        # we're redirected properly
+        for custom_next in (reverse('lti-inactive'), None):
+            if custom_next:
+                lti_post_param['custom_next'] = custom_next
+            else:
+                del lti_post_param['custom_next']
+
+            response = client.post(lti_entry, lti_post_param)
+            self.assertRedirects(response, custom_next or reverse('home'), status_code=302, target_status_code=200)
+
+        self.assertTrue(True)
+
 
 class UserProfileViewTest(UserSetUp, TestCase):
 
@@ -445,6 +504,9 @@ class UserProfileViewTest(UserSetUp, TestCase):
         '''Staff can login'''
         client = Client()
         profile_path = reverse('lti-user-profile')
+        response = self.assertLogin(client, next_path=profile_path, user='staff')
+        self.assertEqual(response.context['object'], self.staff_user)
+
         response = self.assertLogin(client, next_path=profile_path, user='staff')
         self.assertEqual(response.context['object'], self.staff_user)
 

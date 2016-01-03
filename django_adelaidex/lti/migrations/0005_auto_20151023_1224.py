@@ -9,7 +9,7 @@ import django_adelaidex.util.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('lti', '0003_user_cohort'),
+        ('lti', '0004_user_cohort'),
     ]
 
     operations = [

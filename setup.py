@@ -29,7 +29,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
     install_requires=[
-        'Django>=1.7',
+        'Django>=1.7,<1.10',
         'pytz>=2015.2',
         'django-adelaidex-util>=0.3',
         'django-auth-lti>=1.2.4',

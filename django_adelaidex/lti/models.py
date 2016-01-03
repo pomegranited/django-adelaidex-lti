@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction, IntegrityError
 from django.db.models import signals
 from django.dispatch import receiver
 from django.forms import ModelForm
@@ -15,47 +15,6 @@ import re
 
 from django_adelaidex.util.fields import NullableCharField, UniqueBooleanField
 from django_adelaidex.util.widgets import SelectTimeZoneWidget
-
-
-class CohortManager(models.Manager):
-
-    def get_current(self, user=None):
-        '''Return the user's cohort, if set;
-           or the default cohort, if found in the database;
-           or a cohort constructed from ADELAIDEX_LTI settings, if found;
-           or None all else fails.'''
-
-        current = None
-
-        if user and hasattr(user, 'cohort'):
-            current = user.cohort
-
-        if not current:
-            default = self.filter(is_default=True)
-            if default:
-                current = default[0]
-
-        if not current:
-            lti_settings = getattr(settings, 'ADELAIDEX_LTI', {})
-            lti_oauth = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {})
-            if lti_settings or lti_oauth:
-                oauth_key = None
-                oauth_secret = None
-                if lti_oauth:
-                    oauth_key = lti_oauth.keys()[0]
-                    oauth_secret = lti_oauth[oauth_key]
-
-                current = Cohort(
-                    title=lti_settings.get('LINK_TEXT'),
-                    login_url=lti_settings.get('LOGIN_URL'),
-                    enrol_url=lti_settings.get('ENROL_URL'),
-                    _persist_params="\n".join(lti_settings.get('PERSIST_PARAMS', [])),
-                    oauth_key=oauth_key,
-                    oauth_secret=oauth_secret,
-                    is_default=True,
-                )
-            
-        return current
 
 
 class Cohort(models.Model):
@@ -102,6 +61,46 @@ class Cohort(models.Model):
         return params
 
     persist_params = property(_persist_params_list)
+
+    class CohortManager(models.Manager):
+
+        def get_current(self, user=None):
+            '''Return the user's cohort, if set;
+               or the default cohort, if found in the database;
+               or a cohort constructed from ADELAIDEX_LTI settings, if found;
+               or None all else fails.'''
+
+            current = None
+
+            if user and hasattr(user, 'cohort'):
+                current = user.cohort
+
+            if not current:
+                default = self.filter(is_default=True)
+                if default:
+                    current = default[0]
+
+            if not current:
+                lti_settings = getattr(settings, 'ADELAIDEX_LTI', {})
+                lti_oauth = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {})
+                if lti_settings or lti_oauth:
+                    oauth_key = None
+                    oauth_secret = None
+                    if lti_oauth:
+                        oauth_key = lti_oauth.keys()[0]
+                        oauth_secret = lti_oauth[oauth_key]
+
+                    current = Cohort(
+                        title=lti_settings.get('LINK_TEXT'),
+                        login_url=lti_settings.get('LOGIN_URL'),
+                        enrol_url=lti_settings.get('ENROL_URL'),
+                        _persist_params="\n".join(lti_settings.get('PERSIST_PARAMS', [])),
+                        oauth_key=oauth_key,
+                        oauth_secret=oauth_secret,
+                        is_default=True,
+                    )
+                
+            return current
 
     objects = CohortManager()
 
@@ -199,7 +198,12 @@ def post_save(sender, instance=None, **kwargs):
     staff_group = getattr(settings, 'ADELAIDEX_LTI_STAFF_MEMBER_GROUP')
     if staff_group:
         if instance.is_staff:
-            instance.groups.add(staff_group)
+            try:
+                with transaction.atomic():
+                    instance.groups.add(staff_group)
+            except IntegrityError:
+                # something is wrong with my user_groups migration
+                pass
         else:
             instance.groups.remove(staff_group)
 

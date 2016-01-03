@@ -7,7 +7,7 @@ from django.db import models, migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('lti', '0002_cohort'),
+        ('lti', '0003_cohort'),
     ]
 
     operations = [
