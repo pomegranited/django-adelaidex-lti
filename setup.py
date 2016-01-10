@@ -40,7 +40,7 @@ setup(
         'mock==1.0.1',
     ],
     dependency_links=[
-        'http://lti-adx.adelaide.edu.au/pypi/django-auth-lti',
+        'https://lti-adx.adelaide.edu.au/pypi/django-auth-lti',
     ],
     zip_safe=False,
 )
