@@ -39,9 +39,9 @@ class Cohort(models.Model):
         ])
     oauth_secret = models.CharField(_('oauth secret'), max_length=255, unique=True,
         help_text=_('Required. 255 characters or fewer. Letters, digits, spaces and '
-                    '.+:_- only.'),
+                    'punctuation only.'),
         validators=[
-            validators.RegexValidator(r'^[\w\s.@+:-]+$', _('Enter a valid oauth secret.'), 'invalid'),
+            validators.RegexValidator(r'^[\w\s,;|.!@#$%^&*()?+_-]+$', _('Enter a valid oauth secret.'), 'invalid'),
         ])
     _persist_params = models.TextField(_('persistent parameters'), blank=True, null=True, default=None,
         help_text=_('List of parameters sent by the LTI producer to this application, '
