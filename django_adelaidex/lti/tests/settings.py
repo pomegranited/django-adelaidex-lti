@@ -6,8 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 SECRET_KEY = 'notagoodsecret'
 
 # Runs via ./manage.py test
-DEBUG = False
-TEMPLATE_DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ['*']
 STATIC_URL = '/static/'
 LOGIN_URL = 'login'
@@ -29,6 +28,7 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'django.contrib.auth',
+    'django.contrib.admin',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
 
@@ -46,6 +46,11 @@ MIDDLEWARE_CLASSES = (
     'django_adelaidex.lti.middleware.TimezoneMiddleware',
 )
 
+AUTHENTICATION_BACKENDS = [
+    'django_adelaidex.lti.backends.CohortLTIAuthBackend',
+    'django.contrib.auth.backends.ModelBackend', # Django's default auth backend
+]
+
 TIME_ZONE = 'UTC'
 
 AUTH_USER_MODEL = 'lti.User'
@@ -61,6 +66,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
                 'django_adelaidex.lti.context_processors.lti_settings',
                 'django_adelaidex.lti.context_processors.disqus_settings',
                 'django_adelaidex.lti.context_processors.disqus_sso',
@@ -74,3 +80,7 @@ FIXTURE_DIRS = (
 )
 
 ROOT_URLCONF = 'django_adelaidex.lti.tests.urls'
+
+ADELAIDEX_LTI_STAFF_MEMBER_GROUP = 1
+
+#LTI_OAUTH_CREDENTIALS = { 'mykey': 'mysecret' }

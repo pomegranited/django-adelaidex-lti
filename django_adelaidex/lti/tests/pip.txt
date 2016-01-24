@@ -1,7 +1,8 @@
 Django>=1.7,<1.10
 pytz>=2015.2
-django-adelaidex-util>=0.1
-django-auth-lti==1.2.4
+django-adelaidex-util>=0.3
+django-auth-lti>=1.2.4
 selenium==2.48.0
 PyVirtualDisplay==0.1.5
 mock==1.0.1
+coverage==4.0.1

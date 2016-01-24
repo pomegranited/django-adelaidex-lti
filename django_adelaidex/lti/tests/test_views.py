@@ -31,9 +31,10 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         response = self.assertLogin(client, lti_login_path)
 
         self.assertEqual(self.user, response.context['user'])
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertIn('time_zone', response.context['form'].fields)
+        self.assertIn('cohort', response.context['form'].fields)
         self.assertEqual(self.user, response.context['form'].instance)
 
     def test_auth_post(self):
@@ -46,9 +47,10 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         response = client.post(lti_login_path)
 
         self.assertEqual(self.user, response.context['user'])
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertIn('time_zone', response.context['form'].fields)
+        self.assertIn('cohort', response.context['form'].fields)
         self.assertEqual(self.user, response.context['form'].instance)
 
     def test_nickname_post(self):
@@ -113,16 +115,18 @@ class LTIEntryViewTest(UserSetUp, TestCase):
         form_data = {'first_name': ''}
         response = client.post(lti_login_path, form_data)
 
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
         form_data = {'first_name': '   '}
         response = client.post(lti_login_path, form_data)
 
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
     def test_set_is_staff(self):
 
@@ -271,8 +275,8 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     @override_settings(LOGIN_URL=reverse('lti-403'))
     def test_view(self):
@@ -282,7 +286,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
         client = Client()
 
         # ensure no cookies set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # get login view, with next param set
@@ -296,7 +300,7 @@ class LTILoginViewTest(TestOverrideSettings, TestCase):
 
         # ensure cookie was set
         response = client.get(target)
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
 
@@ -305,8 +309,8 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
         'ENROL_URL':'https://www.edx.org', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     def test_view(self):
 
@@ -314,7 +318,7 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
         client = Client()
 
         # ensure no cookies set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # get enrol view, with next param set
@@ -328,7 +332,7 @@ class LTIEnrolViewTest(TestOverrideSettings, TestCase):
 
         # ensure cookie was set
         response = client.get(target)
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
 
@@ -367,8 +371,8 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
     @override_settings(LOGIN_URL=reverse('lti-403'))
     def test_login_redirect(self):
@@ -382,7 +386,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         client.logout()
 
         # ensure we've got no LTI cookie set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # visit the lti login redirect url, with the target in the querystring
@@ -393,7 +397,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         self.assertRedirects(response, settings.ADELAIDEX_LTI['LOGIN_URL'], status_code=302, target_status_code=200)
 
         # ensure cookies were set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
         # login, to bypass the LTI auth
@@ -401,7 +405,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
 
         # post to lti-entry, and ensure we're redirected back to target
         lti_entry = reverse('lti-entry')
-        lti_post_param = {'first_name': 'Username'}
+        lti_post_param = {'first_name': 'Username2'}
         response = client.post(lti_entry, lti_post_param)
         self.assertRedirects(response, target, status_code=302, target_status_code=200)
         
@@ -421,11 +425,10 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
     # Set the LTI Login Url, and use lti-403 as the login URL
     @override_settings(ADELAIDEX_LTI={
         'LOGIN_URL':'https://www.google.com.au', 
-        'PERSIST_NAME': 'adelaidex', 
-        'PERSIST_PARAMS': ['next'],
         'STAFF_MEMBER_GROUP': 1,
+    }, LTI_OAUTH_CREDENTIALS={
+        'adelaidex': 'mysecret'
     })
-    @override_settings(LOGIN_URL='lti-403')
     def test_login_staff_redirect(self):
 
         # url config is dependent on app settings, so reload
@@ -437,7 +440,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         client.logout()
 
         # ensure we've got no LTI cookie set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNone(cookie)
 
         # visit the lti login redirect url, with the target in the querystring
@@ -448,7 +451,7 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
         self.assertRedirects(response, settings.ADELAIDEX_LTI['LOGIN_URL'], status_code=302, target_status_code=200)
 
         # ensure cookies were set
-        cookie = client.cookies.get(settings.ADELAIDEX_LTI['PERSIST_NAME'])
+        cookie = client.cookies.get('adelaidex')
         self.assertIsNotNone(cookie)
 
         # login, to bypass the LTI auth
@@ -524,11 +527,13 @@ class UserProfileViewTest(UserSetUp, TestCase):
         response = client.post(profile_path, form_data)
         self.assertEqual(self.user, response.context['user'])
         self.assertEqual(self.user, response.context['form'].instance)
-        self.assertEqual(2, len(response.context['form'].fields))
+        self.assertEqual(3, len(response.context['form'].fields))
         self.assertIn('first_name', response.context['form'].fields)
         self.assertEquals(u'This field is required.', response.context['form']['first_name'].errors[0])
         self.assertIn('time_zone', response.context['form'].fields)
         self.assertEquals([], response.context['form']['time_zone'].errors)
+        self.assertIn('cohort', response.context['form'].fields)
+        self.assertEquals([], response.context['form']['cohort'].errors)
 
         form_data = {'first_name':'MyNickName'}
         response = client.post(profile_path, form_data)

@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterModelManagers(
-            name='user',
+            'user',
             managers=[
                 ('objects', django_adelaidex.lti.models.UserManager()),
             ],

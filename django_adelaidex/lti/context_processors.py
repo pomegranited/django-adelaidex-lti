@@ -1,23 +1,37 @@
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.utils.safestring import mark_safe
+from django.contrib.auth import REDIRECT_FIELD_NAME
 import base64
 import hashlib
 import hmac
 import json
 import time
 
+from django_adelaidex.lti.models import Cohort
+
 
 def lti_settings(request):
     '''
     Adds LTI-related settings to the context.
     '''
-    adelaidex_lti = getattr(settings, 'ADELAIDEX_LTI', {})
-    lti = {'ADELAIDEX_LTI_LINK_TEXT': adelaidex_lti.get('LINK_TEXT', '')}
+    cohort = Cohort.objects.get_current(request.user)
+    if cohort:
+        lti = {'ADELAIDEX_LTI_LINK_TEXT': cohort.title}
+    else:
+        lti = {'ADELAIDEX_LTI_LINK_TEXT': ''}
 
     query_string = request.META.get('QUERY_STRING', '')
     if query_string:
         query_string = '?%s' % query_string
     lti['ADELAIDEX_LTI_QUERY_STRING'] = query_string
+
+    next_param = request.GET.get(REDIRECT_FIELD_NAME)
+    if next_param:
+        lti['ADELAIDEX_LTI_NEXT_PAGE'] = next_param
+    else:
+        lti['ADELAIDEX_LTI_NEXT_PAGE'] = reverse('lti-entry')
+
     return lti
 
 

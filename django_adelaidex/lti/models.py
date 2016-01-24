@@ -10,9 +10,105 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.models import UserManager
+from django.core.exceptions import ValidationError
+import re
 
-from django_adelaidex.util.fields import NullableCharField
+from django_adelaidex.util.fields import NullableCharField, UniqueBooleanField
 from django_adelaidex.util.widgets import SelectTimeZoneWidget
+
+
+class Cohort(models.Model):
+    class Meta:
+        db_table = 'auth_cohort'
+
+    title = models.CharField(_('title'), max_length=500,
+        help_text=_('Required. Will be displayed to students as the "course name" on the login screen.'),
+    )
+
+    login_url = models.URLField(_('login url'), max_length=500,
+        help_text=_('Required. Choose a URL in your course that displays the LTI component.'),
+    )
+    enrol_url = models.URLField(_('enrol url'), max_length=500, blank=True, null=True, default=None,
+        help_text=_('Optional. Provide a URL for students to enrol in your course.'),
+    )
+    oauth_key = models.CharField(_('oauth key'), max_length=255, unique=True,
+        help_text=_('Required. 255 characters or fewer, but must be unique. Letters, digits and '
+                    '.+:_- only.'),
+        validators=[
+            validators.RegexValidator(r'^[\w.@+:-]+$', _('Enter a valid oauth key.'), 'invalid'),
+        ])
+    oauth_secret = models.CharField(_('oauth secret'), max_length=255, unique=True,
+        help_text=_('Required. 255 characters or fewer. Letters, digits, spaces and '
+                    'punctuation only.'),
+        validators=[
+            validators.RegexValidator(r'^[\w\s,;|.!@#$%^&*()?+_-]+$', _('Enter a valid oauth secret.'), 'invalid'),
+        ])
+    _persist_params = models.TextField(_('persistent parameters'), blank=True, null=True, default=None,
+        help_text=_('List of parameters sent by the LTI producer to this application, '
+                    'which should be preserved during authentication. Put each parameter name on a new line.'),
+        )
+
+    is_default = UniqueBooleanField(help_text=_('Optional. Cohort to use for non-authenticated users. '
+                                                'Only one Cohort can be the default.'))
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    modified_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def _persist_params_list(self):
+        params = []
+        if self._persist_params:
+            params = re.split("[\n\r]+", self._persist_params)
+        return params
+
+    persist_params = property(_persist_params_list)
+
+    class CohortManager(models.Manager):
+
+        def get_current(self, user=None):
+            '''Return the user's cohort, if set;
+               or the default cohort, if found in the database;
+               or a cohort constructed from ADELAIDEX_LTI settings, if found;
+               or None all else fails.'''
+
+            current = None
+
+            if user and hasattr(user, 'cohort'):
+                current = user.cohort
+
+            if not current:
+                default = self.filter(is_default=True)
+                if default:
+                    current = default[0]
+
+            if not current:
+                lti_settings = getattr(settings, 'ADELAIDEX_LTI', {})
+                lti_oauth = getattr(settings, 'LTI_OAUTH_CREDENTIALS', {})
+                if lti_settings or lti_oauth:
+                    oauth_key = None
+                    oauth_secret = None
+                    if lti_oauth:
+                        oauth_key = lti_oauth.keys()[0]
+                        oauth_secret = lti_oauth[oauth_key]
+
+                    current = Cohort(
+                        title=lti_settings.get('LINK_TEXT'),
+                        login_url=lti_settings.get('LOGIN_URL'),
+                        enrol_url=lti_settings.get('ENROL_URL'),
+                        _persist_params="\n".join(lti_settings.get('PERSIST_PARAMS', [])),
+                        oauth_key=oauth_key,
+                        oauth_secret=oauth_secret,
+                        is_default=True,
+                    )
+                
+            return current
+
+    objects = CohortManager()
+
+    def __unicode__(self):
+        return '%s (%s)' % (self.title, self.oauth_key)
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
 
 
 class UserManager(UserManager):
@@ -38,7 +134,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         validators=[
             validators.RegexValidator(r'^[\w.@+:-]+$', _('Enter a valid username.'), 'invalid'),
         ])
-    first_name = NullableCharField(_('nickname'), max_length=255, unique=True,
+    first_name = NullableCharField(_('nickname'), max_length=255,
             blank=True, null=True, default=None,
             help_text=_('255 characters or fewer. Letters, digits and '
                         '@/./+/-/_ only.'),
@@ -59,6 +155,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True, null=True, default=None,
         help_text=_('Timezone to use when displaying dates and times.'))
 
+    cohort = models.ForeignKey(Cohort, blank=True, null=True, default=None)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
@@ -67,6 +165,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
+        unique_together = ('first_name', 'cohort',)
         db_table = 'auth_user'
 
     def __unicode__(self):
@@ -95,8 +194,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 @receiver(signals.post_save, sender=User)
 def post_save(sender, instance=None, **kwargs):
-    '''user.is_staff determines membership in STAFF_MEMBER_GROUP'''
-    staff_group = getattr(settings, 'ADELAIDEX_LTI', {}).get('STAFF_MEMBER_GROUP')
+    '''user.is_staff determines membership in ADELAIDEX_LTI_STAFF_MEMBER_GROUP'''
+    staff_group = getattr(settings, 'ADELAIDEX_LTI_STAFF_MEMBER_GROUP')
     if staff_group:
         if instance.is_staff:
             try:
@@ -112,7 +211,7 @@ def post_save(sender, instance=None, **kwargs):
 class UserForm(ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'time_zone',]
+        fields = ['first_name', 'time_zone', 'cohort', ]
         widgets = {
             'time_zone': SelectTimeZoneWidget,
         }
@@ -131,4 +230,10 @@ class UserForm(ModelForm):
     def clean_first_name(self):
         # Strip leading/trailing spaces from nickname
         first_name = self.cleaned_data.get('first_name', '').strip()
+
+        duplicate = User.objects.filter(cohort=self.instance.cohort,
+            first_name=first_name).exclude(id=self.instance.id)
+        if duplicate.exists():
+            raise ValidationError('Someone with this nickname already exists in your cohort. '
+                                  'Please try a different nickname.')
         return first_name
