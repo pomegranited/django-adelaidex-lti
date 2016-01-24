@@ -429,7 +429,6 @@ class LTILoginEntryViewTest(TestOverrideSettings, UserSetUp, TestCase):
     }, LTI_OAUTH_CREDENTIALS={
         'adelaidex': 'mysecret'
     })
-    @override_settings(LOGIN_URL='lti-403')
     def test_login_staff_redirect(self):
 
         # url config is dependent on app settings, so reload
