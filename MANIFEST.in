@@ -1,5 +1,5 @@
 global-exclude *.pyc
-include LICENSE
-include README.rst
+include LICENSE.md
+include README.md
 recursive-include django_adelaidex/lti/templates *
 recursive-include django_adelaidex/lti/migrations *
