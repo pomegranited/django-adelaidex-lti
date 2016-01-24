@@ -1,5 +1,7 @@
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.utils.safestring import mark_safe
+from django.contrib.auth import REDIRECT_FIELD_NAME
 import base64
 import hashlib
 import hmac
@@ -23,6 +25,13 @@ def lti_settings(request):
     if query_string:
         query_string = '?%s' % query_string
     lti['ADELAIDEX_LTI_QUERY_STRING'] = query_string
+
+    next_param = request.GET.get(REDIRECT_FIELD_NAME)
+    if next_param:
+        lti['ADELAIDEX_LTI_NEXT_PAGE'] = next_param
+    else:
+        lti['ADELAIDEX_LTI_NEXT_PAGE'] = reverse('lti-entry')
+
     return lti
 
 

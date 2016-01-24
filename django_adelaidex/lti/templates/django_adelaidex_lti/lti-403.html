@@ -4,18 +4,18 @@
 <div id="lti-403-page">
 <h1>{{ ADELAIDEX_LTI_LINK_TEXT }}</h1>
 <p>This page may only be viewed by participants of 
-<a href="{% url 'lti-enrol' %}{{ ADELAIDEX_LTI_QUERY_STRING }}" target="_blank">{{ ADELAIDEX_LTI_LINK_TEXT }}</a>.</p>
+<a class="lti-enrol" href="{% url 'lti-enrol' %}{{ ADELAIDEX_LTI_QUERY_STRING }}" target="_blank">{{ ADELAIDEX_LTI_LINK_TEXT }}</a>.</p>
 
 <h2>Already enrolled?</h2>
 
 <ol class="instructions">
-<li><p><a href="{% url 'lti-login' %}{{ ADELAIDEX_LTI_QUERY_STRING }}"
+<li><p><a class="lti-login" href="{% url 'lti-login' %}{{ ADELAIDEX_LTI_QUERY_STRING }}"
 target="_blank">Sign in to {{ ADELAIDEX_LTI_LINK_TEXT }}</a>.</p></li>
-<li><p>Return to this page, and refresh.</p></li>
+<li><p>Return to this page, and <a href="{{ ADELAIDEX_LTI_NEXT_PAGE }}">click here to continue</a>.</p></li>
 </ol>
 
 <h2>Want to enrol?</h2>
-<a href="{% url 'lti-enrol' %}{{ ADELAIDEX_LTI_QUERY_STRING }}">Enrol in {{ ADELAIDEX_LTI_LINK_TEXT }}</a>.
+<a class="lti-enrol" href="{% url 'lti-enrol' %}{{ ADELAIDEX_LTI_QUERY_STRING }}">Enrol in {{ ADELAIDEX_LTI_LINK_TEXT }}</a>.
 
 </div>
 </div>

@@ -243,10 +243,7 @@ class LTIPermissionDeniedViewTest(TestOverrideSettings, SeleniumTestCase):
         self.assertEqual(self.selenium.current_url, lti_403)
 
         # visit lti-403
-        course_link = self.selenium.find_element_by_link_text(settings.ADELAIDEX_LTI['LINK_TEXT'])
-        self.assertEqual(course_link.get_attribute('href'), lti_login)
-
-        login_link = self.selenium.find_element_by_link_text('Go to %s' % settings.ADELAIDEX_LTI['LINK_TEXT'])
+        login_link = self.selenium.find_element_by_link_text('Sign in to %s' % settings.ADELAIDEX_LTI['LINK_TEXT'])
         self.assertEqual(login_link.get_attribute('href'), lti_login)
 
         enrol_link = self.selenium.find_element_by_link_text('Enrol in %s' % settings.ADELAIDEX_LTI['LINK_TEXT'])

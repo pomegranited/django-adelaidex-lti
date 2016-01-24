@@ -35,6 +35,22 @@ class LTIQueryStringTest(TestCase):
         self.assertEquals(response.context['ADELAIDEX_LTI_QUERY_STRING'], '?query=hi+there')
 
 
+class LTINextPageStringTest(TestCase):
+
+    def test_lti_next_not_set(self):
+        # ADELAIDEX_LTI_NEXT_PAGE defaults to lti-entry
+        client = Client()
+        response = client.get(reverse('home'))
+        next_page = reverse('lti-entry')
+        self.assertEquals(response.context['ADELAIDEX_LTI_NEXT_PAGE'], next_page)
+
+    def test_lti_next_set(self):
+        client = Client()
+        next_page = '/some/page'
+        response = client.get('%s?next=%s' % (reverse('home'), next_page))
+        self.assertEquals(response.context['ADELAIDEX_LTI_NEXT_PAGE'], next_page)
+
+
 class DisqusSettingsTest(TestCase):
 
     def test_not_set(self):
